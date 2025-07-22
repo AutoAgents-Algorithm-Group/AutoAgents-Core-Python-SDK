@@ -1,6 +1,5 @@
-from ...client import ChatClient
-import json
-from ...utils import extract_json
+from ..client import ChatClient
+from ..utils import extract_json
 import os
 import requests
 import tempfile
