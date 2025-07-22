@@ -1,9 +1,10 @@
-from ..client import ChatClient
-from ..utils import extract_json
+from ...client import ChatClient
+import json
+from ...utils import extract_json
 import os
 import requests
 import tempfile
-from typing import Optional
+from typing import Optional, Union, List
 from pptx import Presentation
 from pptx.util import Inches
 
@@ -11,35 +12,59 @@ class create_ppt_agent:
     def __init__(self):
         pass
 
-    def outline(self, prompt: str, file_path: str):
+    def outline(self, prompt: str, file_path: Union[str, List[str]]):
         chat_client = ChatClient(
             agent_id="045c418f0dcf4adbb2f15031f06694d1",
             personal_auth_key="48cf18e0e0ca4b51bbf8fa60193ffb5c",
             personal_auth_secret="HWlQXZ5vxgrXDGEtTGGdsTFhJfr9rCmD",
             base_url="https://uat.agentspro.cn"
         )
-        for event in chat_client.invoke(prompt, files=[file_path]):
-            if event['type'] == 'start_bubble':
-                print(f"\n{'=' * 20} 消息气泡{event['bubble_id']}开始 {'=' * 20}")
-            elif event['type'] == 'token':
-                print(event['content'], end='', flush=True)
-            elif event['type'] == 'end_bubble':
-                print(f"\n{'=' * 20} 消息气泡结束 {'=' * 20}")
-            elif event['type'] == 'finish':
-                print(f"\n{'=' * 20} 对话完成 {'=' * 20}")
-                break
+        
+        # 处理单文件或多文件情况
+        if isinstance(file_path, str):
+            files = [file_path]
+        else:
+            files = file_path
+        
+        print(f"Debug: 准备处理 {len(files)} 个文件: {files}")
+        
+        content = ""
+        try:
+            for event in chat_client.invoke(prompt, files=files):
+                if event['type'] == 'start_bubble':
+                    print(f"\n{'=' * 20} 消息气泡{event['bubble_id']}开始 {'=' * 20}")
+                elif event['type'] == 'token':
+                    print(event['content'], end='', flush=True)
+                    content += event['content']
+                elif event['type'] == 'end_bubble':
+                    print(f"\n{'=' * 20} 消息气泡结束 {'=' * 20}")
+                elif event['type'] == 'finish':
+                    print(f"\n{'=' * 20} 对话完成 {'=' * 20}")
+                    break
+                elif event['type'] == 'error':
+                    print(f"\nDebug: 收到错误事件: {event}")
+                    break
+                    
+        except Exception as e:
+            print(f"\nDebug: ChatClient.invoke 发生异常: {type(e).__name__}: {e}")
+            # 如果流出现问题，返回错误信息而不是空字符串
+            if not content.strip():
+                content = f"Stream error: {str(e)}"
+        
+        print(f"\nDebug: 最终返回内容长度: {len(content)}")
+        return content
 
-    def cover(self):
-        pass
+    # def cover(self):
+    #     pass
 
-    def content(self):
-        pass
+    # def content(self):
+    #     pass
 
-    def conclusion(self):
-        pass
+    # def conclusion(self):
+    #     pass
     
-    def save(self, file_path: str):
-        pass
+    # def save(self, file_path: str):
+    #     pass
 
     def download_image(self, url: str) -> Optional[str]:
         """下载远程图片到临时文件"""
