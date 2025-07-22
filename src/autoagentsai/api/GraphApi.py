@@ -2,17 +2,15 @@ import requests
 from ..api.ChatApi import get_jwt_token_api
 from ..types import CreateAppParams
 
-def create_app_api(data: CreateAppParams, base_url: str = "https://uat.agentspro.cn") -> requests.Response:
-    jwt_token = get_jwt_token_api("135c9b6f7660456ba14a2818a311a80e", "i34ia5UpBnjuW42huwr97xTiFlIyeXc7")
+def create_app_api(data: CreateAppParams) -> requests.Response:
+    base_url: str = "https://uat.agentspro.cn"
+    jwt_token = get_jwt_token_api("135c9b6f7660456ba14a2818a311a80e", "i34ia5UpBnjuW42huwr97xTiFlIyeXc7",base_url)
 
     headers = {
         "Authorization": f"Bearer {jwt_token}",
         "Content-Type": "application/json"
     }
     url=f"{base_url}/api/agent/create"
-    data.appModel=data.to_json()
-    if not data.name:
-        data.name = "test"
     response = requests.post(url, json=data.model_dump(), headers=headers)
     # 判断请求结果
     if response.status_code == 200:

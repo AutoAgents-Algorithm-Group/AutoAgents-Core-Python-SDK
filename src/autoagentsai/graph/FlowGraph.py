@@ -1,10 +1,9 @@
-import uuid
 import json
+import uuid
 from copy import deepcopy
 
-import requests
-from ..api.ChatApi import get_jwt_token_api
 from .template_registry import NODE_TEMPLATES
+from ..api.GraphApi import create_app_api
 from ..types import CreateAppParams
 
 
@@ -97,8 +96,6 @@ class FlowGraph:
             "viewport": self.viewport
         }, indent=2, ensure_ascii=False)
 
-    def set_viewport(self, x, y, zoom):
-        self.viewport = {"x": x, "y": y, "zoom": zoom}
 
     def merge_template_io(self,template_io, custom_io):
         # 参数说明：
@@ -126,179 +123,8 @@ class FlowGraph:
 
         return merged
 
-    def post_with_jwt(self, data: CreateAppParams, base_url: str = "https://uat.agentspro.cn") -> requests.Response:
-        # 获取 JWT Token，假设get_jwt_token_api需要这两个参数
-        jwt_token = get_jwt_token_api("135c9b6f7660456ba14a2818a311a80e", "i34ia5UpBnjuW42huwr97xTiFlIyeXc7")
-
-        headers = {
-            "Authorization": f"Bearer {jwt_token}",
-            "Content-Type": "application/json"
-        }
-        url=f"{base_url}/api/agent/create"
+    def compile(self,data: CreateAppParams) -> None :
         data.appModel=self.to_json()
         if not data.name:
-            data.name = "test"
-        response = requests.post(url, json=data.model_dump(), headers=headers)
-        # 判断请求结果
-        if response.status_code == 200:
-            response_data = response.json()
-            if response_data.get("code") == 1:
-                # 成功，返回接口响应内容（包含知识库ID等信息）
-                print("创建成功")
-                return response_data
-            else:
-                raise Exception(f"创建智能体失败: {response_data.get('msg', 'Unknown error')}")
-        else:
-            raise Exception(f"创建智能体失败: {response.status_code} - {response.text}")
-
-    def compile(self):
-        self.post_with_jwt(data=CreateAppParams())
-
-
-if __name__ == "__main__":
-
-    import requests
-    import json
-    import textwrap
-
-    # 你的完整代码字符串，多行用三引号写，保持格式
-    code_str = textwrap.dedent("""
-    from src.autoagentsai.graph import FlowGraph
-    graph = FlowGraph()
-    # 添加节点
-    graph.add_node(
-        node_id="question1",
-        module_type="questionInput",
-        position={"x": 0, "y": 100},
-        inputs=[
-            {"key": "inputText", "value": True},
-            {"key": "uploadFile", "value": True},
-            {"key": "uploadPicture", "value": False},
-            {"key": "fileContrast", "value": False}
-        ]
-    )
-
-    graph.add_node(
-        node_id="pdf2md1",
-        module_type="pdf2md",
-        position={"x": 300, "y": 100},
-        inputs=[
-            {"key": "pdf2mdType", "value": "deep_pdf2md"}
-        ]
-    )
-
-    graph.add_node(
-        node_id="knowledgesSearch1",
-        module_type="knowledgesSearch",
-        position={"x": 600, "y": 100},
-        inputs=[
-            {"key": "datasets", "value": ["智能体知识库"]},
-            {"key": "similarity", "value": 0.65},
-            {"key": "topK", "value": 5}
-        ]
-    )
-
-    graph.add_node(
-        node_id="aiChat1",
-        module_type="aiChat",
-        position={"x": 900, "y": 100},
-        inputs=[
-            {"key": "model", "value": "glm-4-airx"},
-            {"key": "quotePrompt", "value": "你是一个专业文档助手，请根据以下知识库内容回答问题：\\n{{knSearch}}"},
-            {"key": "temperature", "value": 0.1}
-        ]
-    )
-
-    graph.add_node(
-        node_id="confirmreply1",
-        module_type="confirmreply",
-        position={"x": 1200, "y": 100},
-        inputs=[
-            {"key": "text", "value": "当前文档未包含相关答案，请尝试重新提问或上传更详细的资料"}
-        ]
-    )
-
-    # 添加连接边
-    graph.add_edge(
-        source="question1",
-        target="pdf2md1",
-        source_handle="files",
-        target_handle="files"
-    )
-
-    graph.add_edge(
-        source="question1",
-        target="pdf2md1",
-        source_handle="finish",
-        target_handle="switchAny"
-    )
-
-    graph.add_edge(
-        source="pdf2md1",
-        target="knowledgesSearch1",
-        source_handle="pdf2mdResult",
-        target_handle="text"
-    )
-
-    graph.add_edge(
-        source="pdf2md1",
-        target="knowledgesSearch1",
-        source_handle="finish",
-        target_handle="switchAny"
-    )
-
-    graph.add_edge(
-        source="knowledgesSearch1",
-        target="aiChat1",
-        source_handle="quoteQA",
-        target_handle="knSearch"
-    )
-
-    graph.add_edge(
-        source="knowledgesSearch1",
-        target="aiChat1",
-        source_handle="unEmpty",
-        target_handle="switchAny"
-    )
-
-    graph.add_edge(
-        source="knowledgesSearch1",
-        target="confirmreply1",
-        source_handle="isEmpty",
-        target_handle="switchAny"
-    )
-
-    graph.add_edge(
-        source="aiChat1",
-        target="confirmreply1",
-        source_handle="answerText",
-        target_handle="text"
-    )
-
-    graph.add_edge(
-        source="aiChat1",
-        target="confirmreply1",
-        source_handle="finish",
-        target_handle="switchAny"
-    )
-
-    print(graph.to_json())
-
-    graph.compile()
-    """)
-
-    # 构造请求体，requests 会帮你自动转义成正确 JSON 格式
-    payload = {"code": code_str}
-
-    # 接口地址
-    url = "http://127.0.0.1:8000/run"
-
-    # 发送 POST 请求
-    response = requests.post(url, json=payload)
-
-    # 输出响应
-    print("状态码:", response.status_code)
-    try:
-        print("响应内容:", response.json())
-    except Exception:
-        print("响应文本:", response.text)
+            data.name = "unTitle"
+        create_app_api(data)
