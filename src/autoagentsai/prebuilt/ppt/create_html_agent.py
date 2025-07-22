@@ -1,5 +1,4 @@
-from autoagentsai.client import ChatClient
-from autoagentsai.uploader import create_file_like
+from ...client import ChatClient
 
 class create_html_agent:
     def __init__(self):

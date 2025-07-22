@@ -1,6 +1,6 @@
-from autoagentsai.client import ChatClient
+from ...client import ChatClient
 import json
-from autoagents_ai.utils import extract_json
+from ...utils import extract_json
 import os
 import requests
 import tempfile

@@ -3,8 +3,8 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 
-from src.autoagentsai.prebuilt import create_ppt_agent
-from src.autoagentsai.prebuilt.create_html_agent import create_html_agent
+from src.autoagentsai.prebuilt.ppt import create_ppt_agent
+from src.autoagentsai.prebuilt.ppt import create_html_agent
 
 def main():
     outline_agent = create_ppt_agent()  # 用于生成大纲的agent
