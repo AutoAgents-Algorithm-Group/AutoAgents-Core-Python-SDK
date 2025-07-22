@@ -4,7 +4,7 @@ import os
 import mimetypes
 from typing import Optional, Dict, Union, IO, List
 from io import BytesIO
-from .models import FileInput
+from ..types.ChatTypes import FileInput
 
 
 class FileUploader:
@@ -88,13 +88,34 @@ class FileUploader:
 
         for f in files:
             if isinstance(f, str):
-                # 如果是字符串，假设它是 fileId，创建一个基本的 FileInput
-                file_inputs.append(FileInput(
-                    fileId=f,
-                    fileName="",  # 无法从 fileId 推断文件名
-                    fileType="",
-                    fileUrl=""
-                ))
+                # 检查字符串是否是文件路径
+                if os.path.exists(f) or '.' in os.path.basename(f):
+                    # 如果文件存在或包含文件扩展名，当作文件路径处理
+                    try:
+                        file_obj = create_file_like(f)
+                        filename = os.path.basename(f)
+                        upload_result = self.upload(file_obj, filename=filename)
+                        print(f"Debug: 上传文件 {filename}, 结果: {upload_result}")
+                        
+                        if upload_result.get("success", False):
+                            file_inputs.append(FileInput(
+                                fileId=upload_result["fileId"],
+                                fileName=upload_result["fileName"],
+                                fileType=upload_result["fileType"],
+                                fileUrl=upload_result["fileUrl"]
+                            ))
+                        else:
+                            print(f"Warning: 文件上传失败: {upload_result.get('error', '未知错误')}")
+                    except Exception as e:
+                        print(f"Warning: 处理文件路径 {f} 时出错: {str(e)}")
+                else:
+                    # 如果不是文件路径，假设它是 fileId，创建一个基本的 FileInput
+                    file_inputs.append(FileInput(
+                        fileId=f,
+                        fileName="",  # 无法从 fileId 推断文件名
+                        fileType="",
+                        fileUrl=""
+                    ))
             else:
                 # 尝试获取文件名，优先使用 filename 属性，然后是 name 属性
                 filename = getattr(f, "filename", None)

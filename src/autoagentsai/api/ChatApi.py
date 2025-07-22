@@ -1,8 +1,8 @@
 import json
 import requests
 from typing import Generator, Optional, List, Dict, Union, IO
-from .models import ChatRequest, ImageInput, ChatHistoryRequest
-from .uploader import FileUploader
+from ..types.ChatTypes import ChatRequest, ImageInput, ChatHistoryRequest
+from ..utils.uploader import FileUploader
 
 
 def chat_stream_api(
