@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 
 
 import asyncio
-from src.autoagentsai.prebuilt import create_react_agent
+from src.autoagentsai.react import create_react_agent
 from src.autoagentsai.client import MCPClient
 
 async def main():

@@ -3,7 +3,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 
-from src.autoagentsai.prebuilt import create_ppt_agent
+from src.autoagentsai.slide import create_ppt_agent
 
 def main():
     ppt_agent = create_ppt_agent()

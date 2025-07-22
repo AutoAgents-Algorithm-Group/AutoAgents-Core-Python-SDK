@@ -1,4 +1,4 @@
-from ...client import ChatClient
+from ..client import ChatClient
 
 class create_html_agent:
     def __init__(self):
