@@ -12,7 +12,7 @@ def main():
     # ppt_agent.content()
     # ppt_agent.conclusion()
     # ppt_agent.save("论文润色版.pptx")
-    ppt_agent.fill("自主规划智能体未来发展的pptx", "playground/ppt/template-1.pptx", "playground/ppt/output-1.pptx")
+    ppt_agent.fill("自主规划智能体未来发展的pptx", "playground/test_workspace/fill_template.pptx", "playground/test_workspace/fill_output.pptx")
 
 if __name__ == "__main__":
     main()

@@ -10,6 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.11.7",
     "requests>=2.32.4",
+    "python-pptx>=0.6.21",
 ]
 
 [project.scripts]
