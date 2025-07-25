@@ -1,6 +1,6 @@
 from .ChatClient import ChatClient
 from .KbClient import KbClient
-from .McpClient import MCPClient
+from .MCPClient import MCPClient
 
 __all__ = ["ChatClient", "KbClient", "MCPClient"]
 

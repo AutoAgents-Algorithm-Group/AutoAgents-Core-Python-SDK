@@ -103,7 +103,7 @@ class create_ppt_agent:
 
         # 加载 PPTX 模板
         prs = Presentation(template_file_path)
-        
+
         # 用于存储需要清理的临时文件
         temp_files = []
 
@@ -177,7 +177,7 @@ class create_ppt_agent:
             for shape in list(slide.shapes):  # list() to allow removal
                 if not shape.has_text_frame:
                     continue
-
+            
                 text = shape.text.strip()
                 if text.startswith("{{") and text.endswith("}}"):
                     key = text[2:-2].strip()  # 去掉 {{}}
@@ -221,12 +221,12 @@ class create_ppt_agent:
                         # 获取位置并删除原文本框
                         left, top, width, height = shape.left, shape.top, shape.width, shape.height
                         slide.shapes._spTree.remove(shape._element)
-                        
+                            
                         # 确保图片路径存在
                         if os.path.exists(value):
                             slide.shapes.add_picture(value, left, top, width=width, height=height)
                             print(f"成功替换图片: {key}")
-                        else:
+                    else:
                             print(f"警告: 图片文件不存在: {value}")
 
         # 保存为新PPT
