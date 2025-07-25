@@ -58,6 +58,7 @@ class create_ppt_agent:
                 content = f"Stream error: {str(e)}"
         
         print(f"\nDebug: 最终返回内容长度: {len(content)}")
+        content = extract_json(content)
         return content
 
     # def cover(self):
@@ -74,33 +75,6 @@ class create_ppt_agent:
 
 
     def fill(self, data: dict, template_file_path: str = "template-1.pptx", output_file_path: str = "output-1.pptx"):
-        # 创建一个PPT填充的agent
-        # chat_client = ChatClient(
-        #     agent_id="868081a079604dd7ae57921c15f6297d",
-        #     personal_auth_key="339859fa69934ea8b2b0ebd19d94d7f1",
-        #     personal_auth_secret="93TsBecJplOawEipqAdF7TJ0g4IoBMtA",
-        #     base_url="https://uat.agentspro.cn"
-        # )
-
-        # full_response = ""  # 用于存储完整的响应内容
-
-        # for event in chat_client.invoke(prompt):
-        #     if event['type'] == 'start_bubble':
-        #         print(f"\n{'=' * 20} 消息气泡{event['bubble_id']}开始 {'=' * 20}")
-        #     elif event['type'] == 'reasoning_token':
-        #         print(event['content'], end='', flush=True) 
-        #     elif event['type'] == 'token':
-        #         print(event['content'], end='', flush=True)
-        #         full_response += event['content']
-        #     elif event['type'] == 'end_bubble':
-        #         print(f"\n{'=' * 20} 消息气泡结束 {'=' * 20}")
-        #     elif event['type'] == 'finish':
-        #         print(f"\n{'=' * 20} 对话完成 {'=' * 20}")
-        #         break
-
-        # data = extract_json(full_response)
-        # print(data)
-
         # 加载 PPTX 模板
         prs = Presentation(template_file_path)
 
