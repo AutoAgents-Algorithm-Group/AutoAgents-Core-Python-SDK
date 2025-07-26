@@ -1,6 +1,6 @@
 [project]
 name = "autoagentsai"
-version = "0.1.26"
+version = "0.1.27"
 description = "SDK for interacting with Autoagents.ai API"
 readme = "README.md"
 authors = [
@@ -18,6 +18,8 @@ dependencies = [
     "e2b-code-interpreter",
     "openpyxl",
     "supabase",
+    "SQLAlchemy",
+    "psycopg2-binary",
 ]
 
 [project.scripts]
