@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from src.autoagentsai.sandbox import LocalSandboxService
+from src.autoagentsai.sandbox import E2BSandboxService
 from src.autoagentsai.client import ChatClient
 from src.autoagentsai.utils.extractor import extract_python_code
 
@@ -21,7 +21,7 @@ def main():
             
     ai_generated_code = extract_python_code(content)
 
-    sandbox = LocalSandboxService()
+    sandbox = E2BSandboxService(api_key="e2b_fde740a7d2cdd325e98850b55c7c5c6fd8b13c14")
     execution_result = sandbox.run_code(ai_generated_code)
     print(execution_result)
 

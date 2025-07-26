@@ -1,5 +1,4 @@
-from typing import Dict, Any, Optional
-import os
+from typing import Dict, Any
 import base64
 from ..client import ChatClient
 from ..utils.extractor import extract_python_code
@@ -8,8 +7,8 @@ from e2b_code_interpreter import Sandbox
 
 class E2BSandboxService:
     """E2B Sandbox服务，用于安全执行Python代码"""
-    def __init__(self):
-        self.sandbox = Sandbox(timeout=3000, api_key="e2b_fde740a7d2cdd325e98850b55c7c5c6fd8b13c14")
+    def __init__(self, api_key: str):
+        self.sandbox = Sandbox(timeout=3000, api_key=api_key)
 
     def run_code(self, code: str):
         """执行Python代码并返回结果

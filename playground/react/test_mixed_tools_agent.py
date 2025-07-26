@@ -121,7 +121,7 @@ async def test_mixed_tools_agent():
         print(f"   - 自定义函数: {len(mixed_tools) - len(mcp_tools)} 个")
         
         # 4. 创建React Agent
-        react_agent = create_react_agent(chat_client=chat_client, tools=mixed_tools)
+        react_agent = ReActAgent(chat_client=chat_client, tools=mixed_tools)
         
         # 5. 测试不同类型的查询
         test_queries = [
