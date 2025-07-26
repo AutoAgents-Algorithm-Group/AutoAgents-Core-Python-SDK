@@ -1,5 +1,4 @@
 import requests
-import json
 import os
 import mimetypes
 from typing import Optional, Dict, Union, IO, List

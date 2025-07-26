@@ -11,6 +11,13 @@ dependencies = [
     "pydantic>=2.11.7",
     "requests>=2.32.4",
     "python-pptx>=0.6.21",
+    "matplotlib",
+    "pandas",
+    "seaborn",
+    "mcp[cli]",
+    "e2b-code-interpreter",
+    "openpyxl",
+    "supabase",
 ]
 
 [project.scripts]

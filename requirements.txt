@@ -5,3 +5,4 @@ python-pptx
 mcp[cli]
 e2b-code-interpreter
 openpyxl
+supabase
