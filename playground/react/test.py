@@ -1,6 +1,6 @@
 import asyncio
 from src.autoagentsai.client import MCPClient, ChatClient
-from src.autoagentsai.react import create_react_agent
+from src.autoagentsai.react import ReActAgent
 from src.autoagentsai.tools import tool
 
 
@@ -29,7 +29,7 @@ async def main():
     )
 
     # 3. 创建Agent
-    agent = create_react_agent(
+    agent = ReActAgent(
         chat_client=chat_client,
         tools=mcp_tools + [calculate]
     )

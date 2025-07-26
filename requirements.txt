@@ -1,0 +1,7 @@
+pandas
+matplotlib
+seaborn
+python-pptx
+mcp[cli]
+e2b-code-interpreter
+openpyxl

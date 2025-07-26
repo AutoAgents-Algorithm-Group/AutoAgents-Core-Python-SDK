@@ -1,10 +1,9 @@
 from pptx import Presentation
-from pptx.util import Inches, Pt
+from pptx.util import Pt
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.dml.color import RGBColor
 
 from pptx.oxml import parse_xml
-from pptx.oxml.ns import qn
 import re
 import tempfile
 import os

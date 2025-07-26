@@ -6,7 +6,7 @@ import asyncio
 import math
 from datetime import datetime
 from src.autoagentsai.client import MCPClient, ChatClient
-from src.autoagentsai.react.create_react_agent import create_react_agent, tool, ToolWrapper
+from src.autoagentsai.react.ReActAgent import ReActAgent, tool, ToolWrapper
 
 # MCP服务器配置
 mcp_servers_config = {
@@ -141,7 +141,7 @@ async def test_mixed_tools_agent():
             
             try:
                 # 调用React Agent
-                response = await react_agent.invoke(query)
+                response = await react_agent.ainvoke(query)
                 
                 print("🤖 React Agent回答:")
                 print(response)
