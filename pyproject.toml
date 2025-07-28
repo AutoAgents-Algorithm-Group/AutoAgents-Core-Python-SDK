@@ -1,6 +1,6 @@
 [project]
 name = "autoagentsai"
-version = "0.1.27"
+version = "0.1.29"
 description = "SDK for interacting with Autoagents.ai API"
 readme = "README.md"
 authors = [
@@ -20,6 +20,7 @@ dependencies = [
     "supabase",
     "SQLAlchemy",
     "psycopg2-binary",
+    "playwright"
 ]
 
 [project.scripts]

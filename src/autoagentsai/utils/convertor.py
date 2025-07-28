@@ -1,4 +1,5 @@
 import os
+import csv
 import pandas as pd
 from openpyxl import load_workbook
 
@@ -28,3 +29,37 @@ def excel_to_csv_and_images(input_file, output_csv, img_dir):
         with open(img_path, "wb") as f:
             f.write(img._data())  # 直接写入图像二进制数据
     print(f"✅ 已提取 {img_count} 张图片到：{img_dir}")
+
+
+def convert_csv_to_json_list(csv_file_path: str):
+    """
+    读取CSV文件并转换为json列表
+    """
+    try:
+        if not os.path.exists(csv_file_path):
+            print(f"CSV文件不存在: {csv_file_path}")
+            return []
+        
+        data = []
+        with open(csv_file_path, 'r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                # 转换数值类型
+                converted_row = {}
+                for key, value in row.items():
+                    # 尝试转换为数字
+                    try:
+                        if '.' in value:
+                            converted_row[key] = float(value)
+                        else:
+                            converted_row[key] = int(value)
+                    except (ValueError, AttributeError):
+                        # 保持为字符串
+                        converted_row[key] = value
+                data.append(converted_row)
+        
+        print(f"成功读取CSV文件: {csv_file_path}, {len(data)} 条记录")
+        return data
+    except Exception as e:
+        print(f"读取CSV文件失败: {csv_file_path}, 错误: {e}")
+        return []

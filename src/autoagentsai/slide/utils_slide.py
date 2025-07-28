@@ -10,7 +10,7 @@ import os
 import shutil
 import requests
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 
 def parse_markdown_text(text_frame, markdown_text, font_size=14):
@@ -468,3 +468,36 @@ def download_image(url: str) -> Optional[str]:
     except Exception as e:
         print(f"下载图片失败: {url}, 错误: {e}")
         return None
+
+def get_value_by_path(data: dict, path: str) -> Any:
+    """
+    根据路径表达式从数据中获取值
+    支持格式：page[0].title, page[1].sections[0].content 等
+    """
+    try:
+        # 将路径分解为步骤
+        current = data
+        
+        # 使用正则表达式匹配路径中的各个部分
+        # 匹配形如 "key" 或 "key[index]" 的模式
+        pattern = r'([a-zA-Z_][a-zA-Z0-9_]*)?(?:\[(\d+)\])?'
+        steps = re.findall(r'([a-zA-Z_][a-zA-Z0-9_]*(?:\[\d+\])?)', path)
+        
+        for step in steps:
+            # 检查是否包含数组索引
+            if '[' in step and ']' in step:
+                key_part = step.split('[')[0]
+                index_part = step.split('[')[1].rstrip(']')
+                index = int(index_part)
+                
+                if key_part:
+                    current = current[key_part]
+                current = current[index]
+            else:
+                current = current[step]
+        
+        return current
+    except (KeyError, IndexError, ValueError, TypeError) as e:
+        print(f"路径解析错误: {path}, 错误: {e}")
+        return None
+
