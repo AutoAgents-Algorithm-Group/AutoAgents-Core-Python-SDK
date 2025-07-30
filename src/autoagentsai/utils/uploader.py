@@ -141,6 +141,191 @@ class FileUploader:
         return file_inputs
 
 
+class ImageUploader:
+    def __init__(self, jwt_token: str, base_url: str = "https://uat.agentspro.cn"):
+        """
+        AutoAgents AI 图片上传器
+        
+        负责将图片文件上传到 AutoAgents 平台并进行压缩处理，支持返回文件ID或URL。
+        专门针对图片文件优化，支持大小限制和元数据扩展。
+        
+        Args:
+            jwt_token (str): JWT 认证令牌
+                
+            base_url (str, optional): API 服务基础地址
+                - 可选参数，默认为 "https://uat.agentspro.cn"  
+                - 测试环境: "https://uat.agentspro.cn"
+                - 生产环境: "https://agentspro.cn"
+                - 私有部署时可指定自定义地址
+        """
+        self.jwt_token = jwt_token
+        self.base_url = base_url
+        self.headers = {
+            "Authorization": f"Bearer {jwt_token}"
+        }
+
+    def upload(self, 
+               file: IO, 
+               filename: str = "uploaded_image", 
+               return_type: str = "fileId",
+               max_picture_size: Optional[int] = None,
+               metadata: Optional[str] = None) -> Dict:
+        """
+        上传并压缩图片
+        
+        Args:
+            file (IO): 图片文件对象
+            filename (str): 文件名，默认为 "uploaded_image"
+            return_type (str): 返回类型，"fileId"(默认) 或 "url"
+            max_picture_size (int, optional): 最大图片大小限制
+            metadata (str, optional): 扩展数据，JSON字符串格式
+            
+        Returns:
+            Dict: 上传结果，包含文件信息或错误信息
+        """
+        url = f"{self.base_url}/api/fs/uploadAndResizePic"
+        
+        # 根据文件扩展名自动检测MIME类型
+        mime_type, _ = mimetypes.guess_type(filename)
+        if mime_type is None:
+            mime_type = 'application/octet-stream'  # 默认类型
+        
+        print(f"Debug: 上传图片 {filename}, 检测到MIME类型: {mime_type}")
+        
+        files = [
+            ('file', (filename, file, mime_type))
+        ]
+        
+        # 构建请求数据
+        payload = {
+            'returnType': return_type
+        }
+        
+        if max_picture_size is not None:
+            payload['maxPictureSize'] = str(max_picture_size)
+            
+        if metadata is not None:
+            payload['metadata'] = metadata
+        
+        try:
+            response = requests.post(url, headers=self.headers, data=payload, files=files, timeout=30)
+            
+            if response.status_code == 200:
+                try:
+                    result = response.json()
+                    if result.get('code') == 1:  # 成功
+                        data = result["data"]
+                        
+                        if return_type == "url":
+                            return {
+                                "fileId": "",
+                                "fileName": filename,
+                                "fileType": mime_type,
+                                "fileUrl": data,  # URL形式返回
+                                "success": True,
+                                "returnType": return_type
+                            }
+                        else:  # fileId
+                            return {
+                                "fileId": data,  # fileId形式返回
+                                "fileName": filename,
+                                "fileType": mime_type,
+                                "fileUrl": "",
+                                "success": True,
+                                "returnType": return_type
+                            }
+                    else:  # 失败
+                        error_msg = result.get('msg', '未知错误')
+                        raise Exception(f"API返回错误: {error_msg}")
+                        
+                except Exception as e:
+                    # 如果不是JSON响应，返回错误信息字典
+                    print(f"Debug: 非JSON响应，返回原始文本: {response.text}")
+                    return {
+                        "fileId": "",
+                        "fileName": filename,
+                        "fileType": mime_type,
+                        "fileUrl": "",
+                        "success": False,
+                        "error": response.text.strip(),
+                        "returnType": return_type
+                    }
+            else:
+                raise Exception(f"Image upload failed: {response.status_code} - {response.text}")
+        except Exception as e:
+            raise Exception(f"Image upload error: {str(e)}")
+
+    def ensure_image_inputs(self, files: Optional[List[Union[str, IO]]] = None, **kwargs) -> List[FileInput]:
+        """
+        确保图片文件输入格式正确，并批量上传
+        
+        Args:
+            files: 文件列表，可以是文件路径字符串或文件对象
+            **kwargs: 传递给upload方法的额外参数（return_type, max_picture_size, metadata）
+            
+        Returns:
+            List[FileInput]: 处理后的文件输入列表
+        """
+        file_inputs = []
+        if not files:
+            return file_inputs
+
+        for f in files:
+            if isinstance(f, str):
+                # 检查字符串是否是文件路径
+                if os.path.exists(f) or '.' in os.path.basename(f):
+                    # 如果文件存在或包含文件扩展名，当作文件路径处理
+                    try:
+                        file_obj = create_file_like(f)
+                        filename = os.path.basename(f)
+                        upload_result = self.upload(file_obj, filename=filename, **kwargs)
+                        print(f"Debug: 上传图片 {filename}, 结果: {upload_result}")
+                        
+                        if upload_result.get("success", False):
+                            file_inputs.append(FileInput(
+                                fileId=upload_result["fileId"],
+                                fileName=upload_result["fileName"],
+                                fileType=upload_result["fileType"],
+                                fileUrl=upload_result["fileUrl"]
+                            ))
+                        else:
+                            print(f"Warning: 图片上传失败: {upload_result.get('error', '未知错误')}")
+                    except Exception as e:
+                        print(f"Warning: 处理图片文件路径 {f} 时出错: {str(e)}")
+                else:
+                    # 如果不是文件路径，假设它是 fileId，创建一个基本的 FileInput
+                    file_inputs.append(FileInput(
+                        fileId=f,
+                        fileName="",  # 无法从 fileId 推断文件名
+                        fileType="",
+                        fileUrl=""
+                    ))
+            else:
+                # 尝试获取文件名，优先使用 filename 属性，然后是 name 属性
+                filename = getattr(f, "filename", None)
+                if filename is None:
+                    filename = getattr(f, "name", "uploaded_image")
+                    if filename != "uploaded_image":
+                        # 从完整路径中提取文件名
+                        filename = os.path.basename(filename)
+                
+                upload_result = self.upload(f, filename=filename, **kwargs)
+                print(f"Debug: 上传图片 {filename}, 结果: {upload_result}")
+                
+                if upload_result.get("success", False):
+                    file_inputs.append(FileInput(
+                        fileId=upload_result["fileId"],
+                        fileName=upload_result["fileName"],
+                        fileType=upload_result["fileType"],
+                        fileUrl=upload_result["fileUrl"]
+                    ))
+                else:
+                    # 上传失败，但仍创建一个 FileInput 对象以保持一致性
+                    print(f"Warning: 图片上传失败: {upload_result.get('error', '未知错误')}")
+
+        return file_inputs
+
+
 def create_file_like(file_input, filename: Optional[str] = None):
     # 处理不同类型的输入
     if isinstance(file_input, str):
