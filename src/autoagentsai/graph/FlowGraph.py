@@ -1,10 +1,10 @@
 import json
 import uuid
 from copy import deepcopy
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 
 from .NodeRegistry import NODE_TEMPLATES, merge_template_io
-from ..api.GraphApi import create_app_api
+from ..api.GraphApi import create_app_api, process_add_memory_variable
 from ..types.GraphTypes import CreateAppParams
 from ..utils.convertor import convert_json_to_json_list
 
@@ -85,13 +85,18 @@ class FlowGraph:
 
     def add_node(self, node_id, module_type, position, inputs=None, outputs=None):
         tpl = deepcopy(NODE_TEMPLATES.get(module_type))
-        
-        # 转换简洁格式为展开格式
-        converted_inputs = convert_json_to_json_list(inputs)
-        converted_outputs = convert_json_to_json_list(outputs)
-        
-        final_inputs = merge_template_io(tpl.get("inputs", []), converted_inputs)
-        final_outputs = merge_template_io(tpl.get("outputs", []), converted_outputs)
+
+
+        if module_type == "addMemoryVariable":
+            final_inputs = process_add_memory_variable(tpl.get("inputs", [])[0],inputs)
+            final_outputs = []
+        else:
+            # 转换简洁格式为展开格式
+            converted_inputs = convert_json_to_json_list(inputs)
+            converted_outputs = convert_json_to_json_list(outputs)
+            final_inputs = merge_template_io(tpl.get("inputs", []), converted_inputs)
+            final_outputs = merge_template_io(tpl.get("outputs", []), converted_outputs)
+
 
         node = FlowNode(
             node_id=node_id,
@@ -107,6 +112,7 @@ class FlowGraph:
         self.nodes.append(node)
 
     def add_edge(self, source, target, source_handle="", target_handle=""):
+        source_handle, target_handle= self._check_and_fix_handle_type(source,target,source_handle,target_handle)
         edge = FlowEdge(source, target, source_handle, target_handle)
         self.edges.append(edge)
 
@@ -153,3 +159,40 @@ class FlowGraph:
         )
         
         create_app_api(data, self.personal_auth_key, self.personal_auth_secret, self.base_url)
+
+    def _check_and_fix_handle_type(self, source: str, target: str, source_handle: str, target_handle: str) -> Tuple[
+        str, str]:
+        """
+        检查 source_handle 与 target_handle 是否类型一致。
+        若不一致，则清空 target_handle。
+        """
+        source_type = self._get_field_type_from_source(source, source_handle)
+        target_type = self._get_field_type_from_target(target, target_handle)
+
+        return (
+            source_handle,
+            target_handle if source_handle and target_handle and source_type == target_type else ""
+        )
+
+    def _get_field_type_from_source(self, node_id: str, field_key: str) -> Optional[str]:
+        """
+        从节点列表中查找 node_id 对应节点的字段类型（valueType）
+        """
+        for node in self.nodes:
+            if node.id == node_id:
+                for field in node.data.get("outputs", []):
+                    if field.get("key") == field_key:
+                        return field.get("valueType")
+                break
+        return None
+    def _get_field_type_from_target(self, node_id: str, field_key: str) -> Optional[str]:
+        """
+        从节点列表中查找 node_id 对应节点的字段类型（valueType）
+        """
+        for node in self.nodes:
+            if node.id == node_id:
+                for field in node.data.get("inputs", []):
+                    if field.get("key") == field_key:
+                        return field.get("valueType")
+                break
+        return None
