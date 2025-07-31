@@ -1,3 +1,6 @@
+from copy import deepcopy
+from typing import Dict, List, Any
+
 import requests
 from ..api.ChatApi import get_jwt_token_api
 from ..types import CreateAppParams
@@ -23,3 +26,34 @@ def create_app_api(data: CreateAppParams) -> requests.Response:
             raise Exception(f"创建智能体失败: {response_data.get('msg', 'Unknown error')}")
     else:
         raise Exception(f"创建智能体失败: {response.status_code} - {response.text}")
+
+def merge_template_io(template_io: List[Dict[str, Any]], custom_io: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    合并模块字段配置，保留模板结构，用用户字段覆盖部分字段。
+    """
+    if not custom_io:
+        return deepcopy(template_io)
+
+    template_map = {item["key"]: deepcopy(item) for item in template_io}
+    for c in custom_io:
+        key = c.get("key")
+        if key and key in template_map:
+            template_map[key].update(c)
+
+    return list(template_map.values())
+
+def process_add_memory_variable(template: Dict[str, Any], inputs: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+    """
+    将用户提供的字段转换为多个“记忆变量”，每个基于模板生成。
+    """
+    template_input = template.get("inputs", [{}])[0]
+
+    return [
+        {
+            **deepcopy(template_input),
+            "key": item.get("key", ""),
+            "label": item.get("key", ""),
+            "valueType": item.get("valueType", "string")
+        }
+        for item in inputs if "key" in item
+    ]

@@ -4,5 +4,5 @@ class AutoWorkFlow:
         pass
 
 
-    def run(self,prompt,filePath,):
+    def run(self,prompt,filePath):
         pass
