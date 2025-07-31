@@ -47,10 +47,18 @@ def main():
         }
     )
 
-    # 添加记忆变量节点
-    memory_variable_inputs = {}
-    memory_variable_inputs["{question}"] = "{{answerText}}"
-    memory_variable_inputs["{question1}"] = "{{answerText}}"
+    memory_variable_inputs = []
+    input_1 = {
+        "key": "test1",
+        "value_type": "String"
+    }
+    input_2 = {
+        "key": "question1",
+        "value_type": "Boolean"
+    }
+
+    memory_variable_inputs.append(input_1)
+    memory_variable_inputs.append(input_2)
 
     graph.add_node(
         node_id="addMemoryVariable1",
@@ -75,8 +83,8 @@ def main():
 
     graph.add_edge("pdf2md1", "ai1", "finish", "switchAny")
     graph.add_edge("pdf2md1", "ai1", "pdf2mdResult", "text")
-
-    graph.add_edge("ai1", "addMemoryVariable1", "answerText", "feedback")
+    graph.add_edge("pdf2md1", "addMemoryVariable1", "pdf2mdResult", "question1")
+    graph.add_edge("ai1", "addMemoryVariable1", "answerText", "test1")
     graph.add_edge("ai1", "confirmreply1", "finish", "switchAny")
 
     # print(graph.to_json())

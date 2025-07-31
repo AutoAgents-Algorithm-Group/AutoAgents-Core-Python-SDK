@@ -18,3 +18,5 @@ wheels/
 test_workspace/
 
 .DS_Store
+
+*.otf

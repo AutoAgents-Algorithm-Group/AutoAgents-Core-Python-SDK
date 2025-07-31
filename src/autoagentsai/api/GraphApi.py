@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Optional, Union
 
 import requests
 from ..api.ChatApi import get_jwt_token_api
@@ -41,17 +41,29 @@ def merge_template_io(template_io: List[Dict[str, Any]], custom_io: List[Dict[st
 
     return list(template_map.values())
 
-def process_add_memory_variable(template_input: Dict[str, Any], inputs: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+
+def process_add_memory_variable(template_input: Dict[str, Any], data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     将用户提供的字段转换为多个“记忆变量”，每个基于模板生成。
+
+    Args:
+        template_input: 模板字段结构（完整字段定义）
+        data: 用户提供的字段列表，每项包含至少 key，可能包含 label/valueType
+
+    Returns:
+        List of memory variable dicts
     """
+    if not data:
+        return []
+
     return [
         {
             **deepcopy(template_input),
-            "key": item.get("key", ""),
-            "label": item.get("key", ""),
-            "valueType": item.get("value", "string")
+            "key": item["key"],
+            "label": item["key"],
+            "valueType": item.get("valueType", "string")
         }
-        for item in inputs if "key" in item
+        for item in data if "key" in item
     ]
+
 

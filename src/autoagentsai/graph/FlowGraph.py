@@ -85,16 +85,18 @@ class FlowGraph:
 
     def add_node(self, node_id, module_type, position, inputs=None, outputs=None):
         tpl = deepcopy(NODE_TEMPLATES.get(module_type))
-        
-        # 转换简洁格式为展开格式
-        converted_inputs = convert_json_to_json_list(inputs)
-        converted_outputs = convert_json_to_json_list(outputs)
-        if module_type == "addMemoryVariable":
-            final_inputs = process_add_memory_variable(tpl.get("inputs", [])[0],converted_inputs)
-        else:
-            final_inputs = merge_template_io(tpl.get("inputs", []), converted_inputs)
 
-        final_outputs = merge_template_io(tpl.get("outputs", []), converted_outputs)
+
+        if module_type == "addMemoryVariable":
+            final_inputs = process_add_memory_variable(tpl.get("inputs", [])[0],inputs)
+            final_outputs = []
+        else:
+            # 转换简洁格式为展开格式
+            converted_inputs = convert_json_to_json_list(inputs)
+            converted_outputs = convert_json_to_json_list(outputs)
+            final_inputs = merge_template_io(tpl.get("inputs", []), converted_inputs)
+            final_outputs = merge_template_io(tpl.get("outputs", []), converted_outputs)
+
 
         node = FlowNode(
             node_id=node_id,
