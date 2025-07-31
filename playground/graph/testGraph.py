@@ -43,12 +43,14 @@ def main():
             {"key": "temperature", "value": 0.1}
         ]
     )
+    memory_variable_inputs = []
+    memory_variable_inputs.append({"key": "{question}", "value": "{{answerText}}"})
 
     graph.add_node(
         node_id="addMemoryVariable1",
         module_type="addMemoryVariable",
         position={"x": 1200, "y": 100},
-        inputs=[{"key": "question", "value": "{{answerText}}"}]
+        inputs=[{"key": "{question}", "value": "{{answerText}}"}]
     )
 
     graph.add_node(

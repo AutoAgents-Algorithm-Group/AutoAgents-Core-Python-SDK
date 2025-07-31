@@ -3,7 +3,7 @@ import os
 import mimetypes
 from typing import Optional, Dict, Union, IO, List
 from io import BytesIO
-from ..types.ChatTypes import FileInput
+from ..types.ChatTypes import FileInput, ImageInput
 
 
 class FileUploader:
@@ -167,7 +167,7 @@ class ImageUploader:
     def upload(self, 
                file: IO, 
                filename: str = "uploaded_image", 
-               return_type: str = "fileId",
+               return_type: str = "fileId", 
                max_picture_size: Optional[int] = None,
                metadata: Optional[str] = None) -> Dict:
         """
@@ -255,75 +255,65 @@ class ImageUploader:
         except Exception as e:
             raise Exception(f"Image upload error: {str(e)}")
 
-    def ensure_image_inputs(self, files: Optional[List[Union[str, IO]]] = None, **kwargs) -> List[FileInput]:
+    def ensure_image_inputs(self, images: Optional[List[Union[str, IO]]] = None, **kwargs) -> List[ImageInput]:
         """
-        确保图片文件输入格式正确，并批量上传
+        确保图片输入格式正确，支持URL字符串和本地文件路径
         
         Args:
-            files: 文件列表，可以是文件路径字符串或文件对象
+            images: 图片列表，可以是URL字符串、文件路径字符串或文件对象
             **kwargs: 传递给upload方法的额外参数（return_type, max_picture_size, metadata）
             
         Returns:
-            List[FileInput]: 处理后的文件输入列表
+            List[ImageInput]: 处理后的图片输入列表
         """
-        file_inputs = []
-        if not files:
-            return file_inputs
+        image_inputs = []
+        if not images:
+            return image_inputs
 
-        for f in files:
-            if isinstance(f, str):
-                # 检查字符串是否是文件路径
-                if os.path.exists(f) or '.' in os.path.basename(f):
-                    # 如果文件存在或包含文件扩展名，当作文件路径处理
-                    try:
-                        file_obj = create_file_like(f)
-                        filename = os.path.basename(f)
-                        upload_result = self.upload(file_obj, filename=filename, **kwargs)
-                        print(f"Debug: 上传图片 {filename}, 结果: {upload_result}")
-                        
-                        if upload_result.get("success", False):
-                            file_inputs.append(FileInput(
-                                fileId=upload_result["fileId"],
-                                fileName=upload_result["fileName"],
-                                fileType=upload_result["fileType"],
-                                fileUrl=upload_result["fileUrl"]
-                            ))
-                        else:
-                            print(f"Warning: 图片上传失败: {upload_result.get('error', '未知错误')}")
-                    except Exception as e:
-                        print(f"Warning: 处理图片文件路径 {f} 时出错: {str(e)}")
+        # 确保返回URL格式
+        kwargs.setdefault('return_type', 'url')
+
+        for image in images:
+            if isinstance(image, str):
+                if image.startswith(('http://', 'https://')):
+                    # 直接是URL，转换为ImageInput
+                    image_inputs.append(ImageInput(url=image))
                 else:
-                    # 如果不是文件路径，假设它是 fileId，创建一个基本的 FileInput
-                    file_inputs.append(FileInput(
-                        fileId=f,
-                        fileName="",  # 无法从 fileId 推断文件名
-                        fileType="",
-                        fileUrl=""
-                    ))
+                    # 本地文件路径，先上传获取URL
+                    if os.path.exists(image):
+                        try:
+                            with open(image, 'rb') as f:
+                                result = self.upload(
+                                    file=f,
+                                    filename=os.path.basename(image),
+                                    **kwargs
+                                )
+                                if result.get("success") and result.get("fileUrl"):
+                                    image_inputs.append(ImageInput(url=result["fileUrl"]))
+                                else:
+                                    print(f"Warning: 图片上传失败: {image}")
+                        except Exception as e:
+                            print(f"Warning: 处理图片文件失败 {image}: {e}")
+                    else:
+                        print(f"Warning: 图片文件不存在: {image}")
             else:
-                # 尝试获取文件名，优先使用 filename 属性，然后是 name 属性
-                filename = getattr(f, "filename", None)
-                if filename is None:
-                    filename = getattr(f, "name", "uploaded_image")
-                    if filename != "uploaded_image":
-                        # 从完整路径中提取文件名
-                        filename = os.path.basename(filename)
-                
-                upload_result = self.upload(f, filename=filename, **kwargs)
-                print(f"Debug: 上传图片 {filename}, 结果: {upload_result}")
-                
-                if upload_result.get("success", False):
-                    file_inputs.append(FileInput(
-                        fileId=upload_result["fileId"],
-                        fileName=upload_result["fileName"],
-                        fileType=upload_result["fileType"],
-                        fileUrl=upload_result["fileUrl"]
-                    ))
-                else:
-                    # 上传失败，但仍创建一个 FileInput 对象以保持一致性
-                    print(f"Warning: 图片上传失败: {upload_result.get('error', '未知错误')}")
+                # 文件对象，上传后获取URL
+                try:
+                    filename = getattr(image, "filename", None)
+                    if filename is None:
+                        filename = getattr(image, "name", "uploaded_image")
+                        if filename != "uploaded_image":
+                            filename = os.path.basename(filename)
+                    
+                    result = self.upload(image, filename=filename, **kwargs)
+                    if result.get("success") and result.get("fileUrl"):
+                        image_inputs.append(ImageInput(url=result["fileUrl"]))
+                    else:
+                        print(f"Warning: 图片上传失败: {filename}")
+                except Exception as e:
+                    print(f"Warning: 处理图片文件对象失败: {e}")
 
-        return file_inputs
+        return image_inputs
 
 
 def create_file_like(file_input, filename: Optional[str] = None):
