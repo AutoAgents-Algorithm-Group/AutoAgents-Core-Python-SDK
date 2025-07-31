@@ -1,6 +1,6 @@
 [project]
 name = "autoagentsai"
-version = "0.1.31"
+version = "0.1.33"
 description = "SDK for interacting with Autoagents.ai API"
 readme = "README.md"
 authors = [

@@ -326,12 +326,11 @@ NODE_TEMPLATES = {
                 "key": "maxToken",
                 "type": "slider",
                 "label": "回复字数上限",
-                "value": 3000,
+                "value": 5000,
                 "min": 100,
                 "max": 5000,
                 "step": 50,
                 "markList": {
-                    "100": "100",
                     "5000": "5000"
                 },
                 "valueType": "number"
