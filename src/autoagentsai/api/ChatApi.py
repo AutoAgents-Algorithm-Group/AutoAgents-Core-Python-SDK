@@ -158,7 +158,7 @@ def get_chat_history_api(
 def get_jwt_token_api(
     personal_auth_key: str,
     personal_auth_secret: str,
-    base_url: str,
+    base_url: str = "https://uat.agentspro.cn",
 ) -> str:
     """
     获取 AutoAgents AI 平台的 JWT 认证令牌，用户级认证，用于后续的 API 调用认证。

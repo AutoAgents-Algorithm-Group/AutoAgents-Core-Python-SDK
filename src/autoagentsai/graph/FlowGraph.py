@@ -1,10 +1,12 @@
 import json
 import uuid
 from copy import deepcopy
+from typing import Optional, List, Dict
 
-from .template_registry import NODE_TEMPLATES
+from .NodeRegistry import NODE_TEMPLATES, merge_template_io
 from ..api.GraphApi import create_app_api
-from ..types import CreateAppParams
+from ..types.GraphTypes import CreateAppParams
+from ..utils.convertor import convert_json_to_json_list
 
 
 class FlowNode:
@@ -63,15 +65,34 @@ class FlowEdge:
         }
 
 class FlowGraph:
-    def __init__(self):
+    def __init__(self, personal_auth_key: str, personal_auth_secret: str, base_url: str = "https://uat.agentspro.cn"):
+        """
+        初始化 FlowGraph
+        
+        Args:
+            personal_auth_key: 个人认证密钥
+            personal_auth_secret: 个人认证密码
+            base_url: API 基础URL，默认为 "https://uat.agentspro.cn"
+        """
         self.nodes = []
         self.edges = []
         self.viewport = {"x": 0, "y": 0, "zoom": 1.0}
+        
+        # 保存认证信息
+        self.personal_auth_key = personal_auth_key
+        self.personal_auth_secret = personal_auth_secret
+        self.base_url = base_url
 
     def add_node(self, node_id, module_type, position, inputs=None, outputs=None):
         tpl = deepcopy(NODE_TEMPLATES.get(module_type))
-        final_inputs = self.merge_template_io(tpl.get("inputs", []), inputs)
-        final_outputs = self.merge_template_io(tpl.get("outputs", []), outputs)
+        
+        # 转换简洁格式为展开格式
+        converted_inputs = convert_json_to_json_list(inputs)
+        converted_outputs = convert_json_to_json_list(outputs)
+        
+        final_inputs = merge_template_io(tpl.get("inputs", []), converted_inputs)
+        final_outputs = merge_template_io(tpl.get("outputs", []), converted_outputs)
+
         node = FlowNode(
             node_id=node_id,
             module_type=module_type,
@@ -96,35 +117,39 @@ class FlowGraph:
             "viewport": self.viewport
         }, indent=2, ensure_ascii=False)
 
+    def compile(self, 
+                name: str = "未命名智能体", # 智能体名称
+                avatar: str = "https://uat.agentspro.cn/assets/agent/avatar.png", # 头像URL
+                intro: Optional[str] = None, # 智能体介绍
+                chatAvatar: Optional[str] = None, # 对话头像URL
+                shareAble: Optional[bool] = None, # 是否可分享
+                guides: Optional[List] = None, # 引导配置
+                category: Optional[str] = None, # 分类
+                state: Optional[int] = None, # 状态
+                prologue: Optional[str] = None, # 开场白
+                extJsonObj: Optional[Dict] = None, # 扩展JSON对象
+                allowVoiceInput: Optional[bool] = None, # 是否允许语音输入
+                autoSendVoice: Optional[bool] = None, # 是否自动发送语音
+                **kwargs) -> None: # 其他参数
+        """
+        编译并创建智能体应用
+        """
 
-    def merge_template_io(self,template_io, custom_io):
-        # 参数说明：
-        # template_io：模板中inputs或outputs列表，每个元素是一个字段的字典，字段完整
-        # custom_io：用户传入的inputs或outputs列表，通常是部分字段，可能只有部分key覆盖
-
-        if not custom_io:
-            # 如果用户没有传自定义字段，直接返回模板的完整字段（深拷贝避免修改原数据）
-            return deepcopy(template_io)
-
-        merged = []
-        # 遍历模板里的所有字段
-        for t_item in template_io:
-            # 在用户自定义列表中找有没有和当前模板字段 key 一样的字段
-            c_item = next((c for c in custom_io if c.get("key") == t_item.get("key")), None)
-
-            if c_item:
-                # 找到了用户自定义字段
-                merged_item = deepcopy(t_item)  # 先复制模板字段（保证完整结构）
-                merged_item.update(c_item)  # 用用户的字段内容覆盖模板字段（例如value、description等被覆盖）
-                merged.append(merged_item)
-            else:
-                # 用户没定义，直接用模板字段完整拷贝
-                merged.append(deepcopy(t_item))
-
-        return merged
-
-    def compile(self,data: CreateAppParams) -> None :
-        data.appModel=self.to_json()
-        if not data.name:
-            data.name = "unTitle"
-        create_app_api(data)
+        data = CreateAppParams(
+            name=name,
+            avatar=avatar,
+            intro=intro,
+            chatAvatar=chatAvatar,
+            shareAble=shareAble,
+            guides=guides,
+            appModel=self.to_json(),  # 自动设置工作流JSON
+            category=category,
+            state=state,
+            prologue=prologue,
+            extJsonObj=extJsonObj,
+            allowVoiceInput=allowVoiceInput,
+            autoSendVoice=autoSendVoice,
+            **kwargs
+        )
+        
+        create_app_api(data, self.personal_auth_key, self.personal_auth_secret, self.base_url)
