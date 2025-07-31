@@ -1,13 +1,12 @@
 from copy import deepcopy
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 
 import requests
 from ..api.ChatApi import get_jwt_token_api
 from ..types import CreateAppParams
 
-def create_app_api(data: CreateAppParams) -> requests.Response:
-    base_url: str = "https://uat.agentspro.cn"
-    jwt_token = get_jwt_token_api("135c9b6f7660456ba14a2818a311a80e", "i34ia5UpBnjuW42huwr97xTiFlIyeXc7",base_url)
+def create_app_api(data: CreateAppParams, personal_auth_key: str, personal_auth_secret: str, base_url: str) -> requests.Response:
+    jwt_token = get_jwt_token_api(personal_auth_key, personal_auth_secret, base_url)
 
     headers = {
         "Authorization": f"Bearer {jwt_token}",
@@ -20,7 +19,7 @@ def create_app_api(data: CreateAppParams) -> requests.Response:
         response_data = response.json()
         if response_data.get("code") == 1:
             # 成功，返回接口响应内容（包含知识库ID等信息）
-            print("创建成功")
+            print(f"{data.name} 智能体创建成功，请在灵搭平台查看")
             return response_data
         else:
             raise Exception(f"创建智能体失败: {response_data.get('msg', 'Unknown error')}")
@@ -42,18 +41,17 @@ def merge_template_io(template_io: List[Dict[str, Any]], custom_io: List[Dict[st
 
     return list(template_map.values())
 
-def process_add_memory_variable(template: Dict[str, Any], inputs: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+def process_add_memory_variable(template_input: Dict[str, Any], inputs: List[Dict[str, str]]) -> List[Dict[str, Any]]:
     """
     将用户提供的字段转换为多个“记忆变量”，每个基于模板生成。
     """
-    template_input = template.get("inputs", [{}])[0]
-
     return [
         {
             **deepcopy(template_input),
             "key": item.get("key", ""),
             "label": item.get("key", ""),
-            "valueType": item.get("valueType", "string")
+            "valueType": item.get("value", "string")
         }
         for item in inputs if "key" in item
     ]
+

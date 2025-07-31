@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import List, Dict, Optional, Any
 
 NODE_TEMPLATES = {
     "httpInvoke": {
@@ -683,3 +684,31 @@ NODE_TEMPLATES = {
         "moduleType": "addMemoryVariable"
       }
 }
+
+
+def merge_template_io(template_io: List[Dict[str, Any]], custom_io: Optional[List[Dict[str, Any]]]) -> List[
+    Dict[str, Any]]:
+    """
+    用用户自定义字段的 value 覆盖模板中的同 key 字段的 value，其它字段保持模板原样
+
+    Args:
+        template_io: 模板中 inputs 或 outputs 字段列表，结构完整
+        custom_io: 用户自定义字段，通常只提供 key 和要覆盖的 value
+
+    Returns:
+        合并后的 IO 字段列表
+    """
+    if not custom_io:
+        return deepcopy(template_io)
+
+    # 构建 key -> value 的快速映射，支持多次同 key 的话后出现的优先生效
+    custom_value_map = {item["key"]: item["value"] for item in custom_io if "key" in item and "value" in item}
+
+    merged = []
+    for t_item in template_io:
+        item = deepcopy(t_item)
+        if item.get("key") in custom_value_map:
+            item["value"] = custom_value_map[item["key"]]
+        merged.append(item)
+
+    return merged

@@ -2,7 +2,7 @@ import json
 import requests
 from typing import Generator, Optional, List, Dict, Union, IO
 from ..types.ChatTypes import ChatRequest, ImageInput, ChatHistoryRequest
-from ..utils.uploader import FileUploader
+from ..utils.uploader import FileUploader, ImageUploader
 
 
 def chat_stream_api(
@@ -27,8 +27,11 @@ def chat_stream_api(
     - complete: 是否完成一次回复（true时表示一个回复气泡完成）
     - finish: 是否完成整个会话（true时表示整个对话结束）
     """
-    uploader = FileUploader(jwt_token=jwt_token, base_url=base_url)
-    file_inputs = uploader.ensure_file_inputs(files)
+    file_uploader = FileUploader(jwt_token=jwt_token, base_url=base_url)
+    file_inputs = file_uploader.ensure_file_inputs(files)
+
+    image_uploader = ImageUploader(jwt_token=jwt_token, base_url=base_url)
+    image_inputs = image_uploader.ensure_image_inputs(images)
 
     headers = {
         "Authorization": f"Bearer {jwt_token}",
@@ -39,7 +42,7 @@ def chat_stream_api(
         agentId=agent_id,
         chatId=chat_id,
         userChatInput=prompt,
-        images=[ImageInput(url=u) for u in images] if images else [],
+        images=image_inputs,
         files=file_inputs,
         state=state or {},
         buttonKey=button_key or "",
@@ -155,7 +158,7 @@ def get_chat_history_api(
 def get_jwt_token_api(
     personal_auth_key: str,
     personal_auth_secret: str,
-    base_url: str,
+    base_url: str = "https://uat.agentspro.cn",
 ) -> str:
     """
     获取 AutoAgents AI 平台的 JWT 认证令牌，用户级认证，用于后续的 API 调用认证。

@@ -1,6 +1,6 @@
 from ..client import ChatClient
 
-class create_html_agent:
+class HtmlAgent:
     def __init__(self):
         # 用于存储从封面页学习到的风格
         self.learned_style = None

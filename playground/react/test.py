@@ -1,37 +1,40 @@
-import os
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-
-
 import asyncio
-from src.autoagentsai.react import create_react_agent
-from src.autoagentsai.client import MCPClient
+from src.autoagentsai.client import MCPClient, ChatClient
+from src.autoagentsai.react import ReActAgent
+from src.autoagentsai.tools import tool
+
 
 async def main():
-    mcp_client = MCPClient(
-        {
-            "math": {
-                "command": "python",
-                # Replace with absolute path to your math_server.py file
-                "args": ["/path/to/math_server.py"],
-                "transport": "stdio",
-            },
-            "weather": {
-                # Ensure you start your weather server on port 8000
-                "url": "http://localhost:8000/mcp",
-                "transport": "streamable_http",
-            }
+    # 1. 配置MCP服务器
+    mcp_client = MCPClient({
+        "your_mcp_server_name": {
+            "transport": "streamable_http",
+            "url": "your_url"
         }
+    })
+
+    @tool(name="计算器", description="数学计算")
+    def calculate(a: int, b: int, op: str) -> float:
+        if op == '+': return a + b
+        elif op == '*': return a * b
+        return 0
+
+    mcp_tools = await mcp_client.get_tools() # 获取MCP工具
+
+    # 2. 定义ChatClient
+    chat_client = ChatClient(
+        agent_id="your_agent_id",
+        personal_auth_key="your_personal_auth_key",
+        personal_auth_secret="your_personal_auth_secret"
     )
 
-    tools = await mcp_client.get_tools()
-
-    agent = create_react_agent(
-        model = "anthropic:claude-3-7-sonnet-latest",
-        tools = tools
+    # 3. 创建Agent
+    agent = ReActAgent(
+        chat_client=chat_client,
+        tools=mcp_tools + [calculate]
     )
 
-    result = await agent.ainvoke("What is the weather in Tokyo?")
+    result = await agent.invoke("计算 15 + 25, 并且搜索Python教程")
     print(result)
 
 if __name__ == "__main__":

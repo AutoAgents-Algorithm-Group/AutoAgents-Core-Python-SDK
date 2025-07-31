@@ -1,4 +1,4 @@
-from .create_html_agent import create_html_agent
-from .create_ppt_agent import create_ppt_agent
+from .SlideAgent import SlideAgent
+from .HtmlAgent import HtmlAgent
 
-__all__ = [ "create_ppt_agent", "create_html_agent"]
+__all__ = [ "SlideAgent", "HtmlAgent"]
