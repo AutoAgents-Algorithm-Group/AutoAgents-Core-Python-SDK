@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import List, Dict, Optional, Any
 
 NODE_TEMPLATES = {
     "httpInvoke": {
@@ -683,3 +684,36 @@ NODE_TEMPLATES = {
         "moduleType": "addMemoryVariable"
       }
 }
+
+
+def merge_template_io(template_io: List[Dict[str, Any]], custom_io: Optional[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+    """
+    合并模板IO配置和用户自定义IO配置
+    
+    Args:
+        template_io: 模板中inputs或outputs列表，每个元素是一个字段的字典，字段完整
+        custom_io: 用户传入的inputs或outputs列表，通常是部分字段，可能只有部分key覆盖
+        
+    Returns:
+        合并后的IO配置列表
+    """
+    if not custom_io:
+        # 如果用户没有传自定义字段，直接返回模板的完整字段（深拷贝避免修改原数据）
+        return deepcopy(template_io)
+
+    merged = []
+    # 遍历模板里的所有字段
+    for t_item in template_io:
+        # 在用户自定义列表中找有没有和当前模板字段 key 一样的字段
+        c_item = next((c for c in custom_io if c.get("key") == t_item.get("key")), None)
+
+        if c_item:
+            # 找到了用户自定义字段
+            merged_item = deepcopy(t_item)  # 先复制模板字段（保证完整结构）
+            merged_item.update(c_item)  # 用用户的字段内容覆盖模板字段（例如value、description等被覆盖）
+            merged.append(merged_item)
+        else:
+            # 用户没定义，直接用模板字段完整拷贝
+            merged.append(deepcopy(t_item))
+
+    return merged
