@@ -14,7 +14,7 @@ def main():
 
     # 添加节点
     graph.add_node(
-        node_id="question1",
+        node_id="simpleInputId",
         module_type="questionInput",
         position={"x": 0, "y": 300},
         inputs={
@@ -40,7 +40,7 @@ def main():
         module_type="confirmreply",
         position={"x": 1000, "y": 300},
         inputs={
-            "text": r"文件内容：{{pdf2md1_pdf2mdResult}}",
+            "text": r"文件内容：{{@pdf2md1_pdf2mdResult}}",
             "stream": True
         }
     )
@@ -50,18 +50,18 @@ def main():
         module_type="aiChat",
         position={"x": 1500, "y": 300},
         inputs={
-            "model": "glm-4-airx",
+            "model": "doubao-deepseek-v3",
             "quotePrompt": """
 <角色>
 你是一个文件解答助手，你可以根据文件内容，解答用户的问题
 </角色>
 
 <文件内容>
-{{pdf2md1_pdf2mdResult}}
+{{@pdf2md1_pdf2mdResult}}
 </文件内容>
 
 <用户问题>
-{{question1_userChatInput}}
+{{@question1_userChatInput}}
 </用户问题>
             """,
             "knSearch": "",
@@ -96,9 +96,9 @@ def main():
 
 
     # 添加连接边
-    graph.add_edge("question1", "pdf2md1", "finish", "switchAny")
-    graph.add_edge("question1", "pdf2md1", "files", "files")
-    graph.add_edge("question1", "addMemoryVariable1", "userChatInput", "question1_userChatInput")
+    graph.add_edge("simpleInputId", "pdf2md1", "finish", "switchAny")
+    graph.add_edge("simpleInputId", "pdf2md1", "files", "files")
+    graph.add_edge("simpleInputId", "addMemoryVariable1", "userChatInput", "question1_userChatInput")
 
     graph.add_edge("pdf2md1", "confirmreply1", "finish", "switchAny")
     graph.add_edge("pdf2md1", "addMemoryVariable1", "pdf2mdResult", "pdf2md1_pdf2mdResult")
@@ -108,7 +108,7 @@ def main():
     graph.add_edge("ai1", "addMemoryVariable1", "answerText", "ai1_answerText")
 
     
-    # 编译
+    # 编译,导入配置，点击确定
     graph.compile(
             name="awf-beta-文档助手",
             intro="这是一个专业的文档助手，可以帮助用户分析和理解文档内容",
