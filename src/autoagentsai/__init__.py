@@ -4,6 +4,7 @@ from .utils import extract_json, FileUploader
 from .slide import SlideAgent, HtmlAgent
 from .react import ReActAgent
 from .sandbox import E2BSandboxService, LocalSandboxService
+from .publish import Publisher
 
 __all__ = [
     "ChatClient", "MCPClient", 
@@ -11,7 +12,8 @@ __all__ = [
     "extract_json", "FileUploader", 
     "SlideAgent", "HtmlAgent", 
     "ReActAgent", 
-    "E2BSandboxService", "LocalSandboxService"
+    "E2BSandboxService", "LocalSandboxService",
+    "Publisher"
 ]
 
 
