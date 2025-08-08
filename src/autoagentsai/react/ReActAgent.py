@@ -17,7 +17,7 @@ class ReActAgent:
             
             if not selected_tools:
                 response_generator = self.chat_client.invoke(prompt)
-                    # 处理生成器响应
+                # 处理生成器响应
                 full_response = ""
                 for event in response_generator:
                     if event.get('type') == 'token':

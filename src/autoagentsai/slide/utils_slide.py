@@ -145,10 +145,12 @@ def fill_existing_table(table, data, font_size=12):
         
     template_row = table.rows[template_row_idx]
     col_templates = [cell.text for cell in template_row.cells]
+    
+    # 获取表格的底层XML对象（在循环外定义）
+    tbl = table._tbl
 
     for row_data in data:
         # 使用底层XML操作添加新行
-        tbl = table._tbl
         new_tr = parse_xml(template_row._tr.xml)
         tbl.append(new_tr)
         

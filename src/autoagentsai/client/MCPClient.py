@@ -1,6 +1,6 @@
 import mcp
 from mcp.client.streamable_http import streamablehttp_client
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 from dataclasses import dataclass
 
 @dataclass
@@ -18,7 +18,7 @@ class McpServerConfig:
 
 
 class MCPClient:
-    def __init__(self, servers_config: Dict[str, Dict[str, Any]]):
+    def __init__(self, servers_config: Dict[str, Union[Dict[str, Any], McpServerConfig]]):
         """
         初始化MCP客户端
         
@@ -40,12 +40,17 @@ class MCPClient:
         
         # 转换配置为McpServerConfig对象
         for name, config in servers_config.items():
-            self.servers_config[name] = McpServerConfig(
-                transport=config.get("transport"),
-                command=config.get("command"),
-                args=config.get("args"),
-                url=config.get("url")
-            )
+            if isinstance(config, McpServerConfig):
+                # 如果已经是McpServerConfig对象，直接使用
+                self.servers_config[name] = config
+            else:
+                # 如果是字典，转换为McpServerConfig对象
+                self.servers_config[name] = McpServerConfig(
+                    transport=config.get("transport"),
+                    command=config.get("command"),
+                    args=config.get("args"),
+                    url=config.get("url")
+                )
     
     async def get_tools(self) -> List[Any]:
         """

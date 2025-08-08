@@ -6,18 +6,19 @@ import asyncio
 import math
 from datetime import datetime
 from src.autoagentsai.client import MCPClient, ChatClient
-from src.autoagentsai.react.ReActAgent import ReActAgent, tool, ToolWrapper
+from src.autoagentsai.react import ReActAgent
+from src.autoagentsai.tools import tool, ToolWrapper
 
 # MCP服务器配置
 mcp_servers_config = {
-    "exa": {
+    "brightdata-mcp": {
         "transport": "streamable_http",
-        "url": "https://server.smithery.ai/exa/mcp?api_key=5527ddac-6c10-419c-997a-c311a0115831&profileId=unchanged-whitefish-itZWkW"
+        "url": "https://server.smithery.ai/@luminati-io/brightdata-mcp/mcp?api_key=5527ddac-6c10-419c-997a-c311a0115831&profile=unchanged-whitefish-itZWkW"
     },
-    "duckduckgo": {
-        "transport": "streamable_http",
-        "url": "https://server.smithery.ai/@nickclyde/duckduckgo-mcp-server/mcp?api_key=5527ddac-6c10-419c-997a-c311a0115831&profileId=unchanged-whitefish-itZWkW"
-    }
+    # "duckduckgo": {
+    #     "transport": "streamable_http",
+    #     "url": "https://server.smithery.ai/@nickclyde/duckduckgo-mcp-server/mcp?api_key=5527ddac-6c10-419c-997a-c311a0115831&profileId=unchanged-whitefish-itZWkW"
+    # }
 }
 
 # ChatClient配置
@@ -128,11 +129,11 @@ async def test_mixed_tools_agent():
             # "帮我计算 15 + 27 的结果",
             # "求 8 的平方根是多少",
             # "计算斐波那契数列的第10项",
-            "现在是几点？",
-            "字符串'Hello World'有多少个字符？",
-            "请搜索一下人工智能的最新发展",
-            "给我一个延迟2秒的问候，我的名字是张三",
-            "帮我计算 3.14 乘以 2.5"
+            "现在是北京时间的2025年8月6日，收集中国大陆国央企，最近一个月发布的工程领域的招标信息，最终输出为html",
+            # "字符串'Hello World'有多少个字符？",
+            # "请搜索一下人工智能的最新发展",
+            # "给我一个延迟2秒的问候，我的名字是张三",
+            # "帮我计算 3.14 乘以 2.5"
         ]
         
         for i, query in enumerate(test_queries, 1):
