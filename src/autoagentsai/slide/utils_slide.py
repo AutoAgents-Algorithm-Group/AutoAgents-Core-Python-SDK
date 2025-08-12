@@ -9,8 +9,11 @@ import tempfile
 import os
 import shutil
 import requests
+import base64
+import mimetypes
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, Dict
+from io import BytesIO
 
 
 def parse_markdown_text(text_frame, markdown_text, font_size=14):
@@ -471,6 +474,57 @@ def download_image(url: str) -> Optional[str]:
         print(f"下载图片失败: {url}, 错误: {e}")
         return None
 
+
+def download_template(url: str) -> Optional[str]:
+    """
+    下载远程模板文件到临时文件
+    
+    Args:
+        url: 模板文件URL
+    
+    Returns:
+        str: 临时文件路径，如果下载失败返回None
+    """
+    
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        # 验证content-type是否为PowerPoint文件
+        content_type = response.headers.get('content-type', '').lower()
+        valid_ppt_types = [
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/vnd.ms-powerpoint',
+            'application/octet-stream'  # 有些服务器可能返回这个通用类型
+        ]
+        
+        # 从URL路径获取文件扩展名
+        url_path = url.split('?')[0].lower()  # 去掉查询参数
+        file_extension = None
+        if url_path.endswith(('.pptx', '.ppt')):
+            file_extension = '.pptx' if url_path.endswith('.pptx') else '.ppt'
+        
+        # 如果content-type不匹配但URL有正确的扩展名，仍然尝试下载
+        if not any(ppt_type in content_type for ppt_type in valid_ppt_types) and not file_extension:
+            print(f"跳过非PowerPoint文件: {url}, content-type: {content_type}")
+            return None
+        
+        # 创建临时文件，优先使用URL中的扩展名
+        suffix = file_extension or '.pptx'  # 默认使用.pptx
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        
+        # 下载文件内容
+        for chunk in response.iter_content(chunk_size=8192):
+            temp_file.write(chunk)
+        
+        temp_file.close()
+        print(f"成功下载模板文件: {url} -> {temp_file.name}")
+        return temp_file.name
+        
+    except Exception as e:
+        print(f"下载模板文件失败: {url}, 错误: {e}")
+        return None
+
 def get_value_by_path(data: dict, path: str) -> Any:
     """
     根据路径表达式从数据中获取值
@@ -502,4 +556,216 @@ def get_value_by_path(data: dict, path: str) -> Any:
     except (KeyError, IndexError, ValueError, TypeError) as e:
         print(f"路径解析错误: {path}, 错误: {e}")
         return None
+
+
+# ==================== 认证和上传相关功能 ====================
+
+def get_jwt_token_api(
+    personal_auth_key: str,
+    personal_auth_secret: str,
+    base_url: str = "https://uat.agentspro.cn",
+) -> str:
+    """
+    获取 AutoAgents AI 平台的 JWT 认证令牌，用户级认证，用于后续的 API 调用认证。
+    JWT token 具有时效性，30天过期后需要重新获取。
+    
+    Args:
+        personal_auth_key (str): 认证密钥
+            - 获取方式：右上角 - 个人密钥
+            
+        personal_auth_secret (str): 认证密钥
+            - 获取方式：右上角 - 个人密钥
+
+        base_url (str, optional): API 服务基础地址
+            - 默认值: "https://uat.agentspro.cn"
+            - 测试环境: "https://uat.agentspro.cn"  
+            - 生产环境: "https://agentspro.cn"
+            - 私有部署时可指定自定义地址
+            
+    Returns:
+        str: JWT 认证令牌            
+    """
+    
+    headers = {
+        "Authorization": f"Bearer {personal_auth_key}.{personal_auth_secret}",
+        "Content-Type": "application/json"
+    }
+
+    url = f"{base_url}/openapi/user/auth"
+    response = requests.get(url, headers=headers)
+    return response.json()["data"]["token"]
+
+
+def create_file_like(file_input, filename: Optional[str] = None):
+    """创建类文件对象"""
+    # 处理不同类型的输入
+    if isinstance(file_input, str):
+        # 文件路径
+        with open(file_input, "rb") as f:
+            file_content = f.read()
+        
+        file_like = BytesIO(file_content)
+        file_like.name = file_input.split("/")[-1]
+        return file_like
+        
+    elif isinstance(file_input, bytes):
+        # 原始字节数据
+        file_like = BytesIO(file_input)
+        file_like.name = filename or "uploaded_file"
+        return file_like
+        
+    elif isinstance(file_input, BytesIO):
+        # 已经是 BytesIO 对象
+        if not hasattr(file_input, 'name') or not file_input.name:
+            file_input.name = filename or "uploaded_file"
+        return file_input
+        
+    elif hasattr(file_input, 'read'):
+        # 文件对象或类文件对象
+        try:
+            # 尝试读取内容
+            content = file_input.read()
+            if isinstance(content, str):
+                content = content.encode('utf-8')
+            
+            file_like = BytesIO(content)
+            
+            # 确定文件名的优先级
+            if filename:
+                file_like.name = filename
+            elif hasattr(file_input, 'filename') and file_input.filename:
+                file_like.name = file_input.filename
+            elif hasattr(file_input, 'name') and file_input.name:
+                file_like.name = os.path.basename(file_input.name)
+            else:
+                file_like.name = "uploaded_file"
+                
+            return file_like
+            
+        except Exception as e:
+            raise ValueError(f"无法读取文件对象: {str(e)}")
+            
+    else:
+        raise TypeError(f"不支持的文件输入类型: {type(file_input)}")
+
+
+class SimpleFileUploader:
+    """简化的文件上传器"""
+    
+    def __init__(self, personal_auth_key: str, personal_auth_secret: str, base_url: str = "https://uat.agentspro.cn"):
+        self.jwt_token = get_jwt_token_api(personal_auth_key, personal_auth_secret, base_url)
+        self.base_url = base_url
+        self.headers = {
+            "Authorization": f"Bearer {self.jwt_token}"
+        }
+
+    def upload(self, file, filename: str = "uploaded_file") -> Dict:
+        """上传文件"""
+        
+        url = f"{self.base_url}/api/fs/upload"
+        
+        # 根据文件扩展名自动检测MIME类型
+        mime_type, _ = mimetypes.guess_type(filename)
+        if mime_type is None:
+            mime_type = 'application/octet-stream'  # 默认类型
+        
+        print(f"Debug: 上传文件 {filename}, 检测到MIME类型: {mime_type}")
+        
+        files = [
+            ('file', (filename, file, mime_type))
+        ]
+        
+        payload = {}
+        
+        try:
+            response = requests.post(url, headers=self.headers, data=payload, files=files, timeout=30)
+            
+            if response.status_code == 200:
+                try:
+                    result = response.json()
+                    if result.get('code') == 1:  # 成功
+                        file_id = result["data"]
+                        return {
+                            "fileId": file_id,
+                            "fileName": filename,
+                            "fileType": mime_type,
+                            "fileUrl": "",  # 当前API不返回URL
+                            "success": True
+                        }
+                    else:  # 失败
+                        error_msg = result.get('msg', '未知错误')
+                        raise Exception(f"API返回错误: {error_msg}")
+                        
+                except Exception as e:
+                    # 如果不是JSON响应，返回错误信息字典
+                    print(f"Debug: 非JSON响应，返回原始文本: {response.text}")
+                    return {
+                        "fileId": "",
+                        "fileName": filename,
+                        "fileType": mime_type,
+                        "fileUrl": "",
+                        "success": False,
+                        "error": response.text.strip()
+                    }
+            else:
+                raise Exception(f"Upload failed: {response.status_code} - {response.text}")
+        except Exception as e:
+            raise Exception(f"File upload error: {str(e)}")
+
+
+# ==================== 混合占位符相关功能 ====================
+
+def is_pure_placeholder(text: str) -> Optional[str]:
+    """
+    检查文本是否为纯占位符（只包含一个占位符且无其他文字）
+    
+    Args:
+        text: 要检查的文本
+    
+    Returns:
+        str: 如果是纯占位符，返回占位符内容；否则返回None
+    """
+    text = text.strip()
+    if text.startswith("{{") and text.endswith("}}") and text.count("{{") == 1:
+        return text[2:-2].strip()
+    return None
+
+
+def replace_mixed_placeholders(text: str, data: dict) -> str:
+    """
+    替换文本中的混合占位符
+    支持格式: "欢迎 {{name}}，今天是 {{date}}"
+    
+    Args:
+        text: 包含占位符的文本
+        data: 数据字典
+    
+    Returns:
+        str: 替换后的文本
+    """
+    # 使用正则表达式找到所有占位符
+    placeholder_pattern = r'\{\{([^}]+)\}\}'
+    
+    def replace_placeholder(match):
+        placeholder_content = match.group(1).strip()
+        
+        # 判断类型前缀
+        if placeholder_content.startswith("@"):
+            # 图片占位符在混合文本中不支持，返回原文
+            return match.group(0)
+        elif placeholder_content.startswith("#"):
+            # 表格占位符在混合文本中不支持，返回原文
+            return match.group(0)
+        else:
+            # 普通文本占位符
+            value = get_value_by_path(data, placeholder_content)
+            if value is not None:
+                return str(value)
+            else:
+                # 如果找不到值，保留原占位符
+                return match.group(0)
+    
+    # 替换所有占位符
+    result = re.sub(placeholder_pattern, replace_placeholder, text)
+    return result
 

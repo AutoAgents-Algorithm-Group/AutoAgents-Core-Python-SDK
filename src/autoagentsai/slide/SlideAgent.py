@@ -3,18 +3,26 @@ from ..utils.extractor import extract_json
 from ..utils.convertor import convert_csv_to_json_list
 from .utils_slide import (
     download_image, 
+    download_template,
     parse_markdown_text, 
     apply_inline_formatting, 
     enable_bullet, 
     fill_existing_table, 
     find_nearest_table,
-    get_value_by_path
+    get_value_by_path,
+    cleanup_temp_file,
+    SimpleFileUploader,
+    is_pure_placeholder,
+    replace_mixed_placeholders
 )
 import os
-from typing import List
+import base64
+import tempfile
+from typing import List, Optional, Dict, Union
 from pptx import Presentation
 from pptx.util import Pt
 from pptx.enum.text import PP_ALIGN
+
 
 
 class SlideAgent:
@@ -59,12 +67,60 @@ class SlideAgent:
         return content
 
 
-    def fill(self, data: dict, template_file_path: str, output_file_path: str):
-        # 加载 PPTX 模板
-        prs = Presentation(template_file_path)
-
+    def fill(self, 
+             data: dict, 
+             template_file_path: str, 
+             output_file_path: Optional[str] = None,
+             output_format: str = "local",
+             personal_auth_key: Optional[str] = None,
+             personal_auth_secret: Optional[str] = None,
+             base_url: str = "https://uat.agentspro.cn") -> Union[str, Dict]:
+        """
+        使用数据填充PowerPoint模板
+        
+        Args:
+            data: 要填充的数据字典
+            template_file_path: 模板文件路径（支持本地路径和URL）
+            output_file_path: 输出文件路径（当output_format为"local"时必需）
+            output_format: 输出格式，支持 "local"、"base64"、"url"
+            personal_auth_key: 当output_format为"url"时需要的认证密钥
+            personal_auth_secret: 当output_format为"url"时需要的认证密钥
+            base_url: 上传服务的基础URL
+            
+        Returns:
+            str: 当output_format为"local"时返回文件路径，为"base64"时返回base64字符串
+            Dict: 当output_format为"url"时返回上传结果字典
+        """
+        
+        # 参数验证
+        if output_format not in ["local", "base64", "url"]:
+            raise ValueError(f"不支持的输出格式: {output_format}，支持的格式: local, base64, url")
+        
+        if output_format == "local" and not output_file_path:
+            raise ValueError("当output_format为'local'时，必须提供output_file_path参数")
+            
+        if output_format == "url" and not personal_auth_key and not personal_auth_secret:
+            raise ValueError("当output_format为'url'时，必须提供personal_auth_key和personal_auth_secret参数")
         # 用于存储需要清理的临时文件
         temp_files = []
+        
+        # 检查模板路径是否为URL，如果是则下载到临时文件
+        actual_template_path = template_file_path
+        is_template_from_url = False
+        
+        if template_file_path.startswith(('http://', 'https://')):
+            print(f"检测到URL模板: {template_file_path}")
+            downloaded_template = download_template(template_file_path)
+            if downloaded_template:
+                actual_template_path = downloaded_template
+                temp_files.append(downloaded_template)
+                is_template_from_url = True
+                print(f"模板下载成功: {downloaded_template}")
+            else:
+                raise ValueError(f"无法下载模板文件: {template_file_path}")
+        
+        # 加载 PPTX 模板
+        prs = Presentation(actual_template_path)
 
         # 处理远程图片下载
         processed_data = {}
@@ -166,63 +222,129 @@ class SlideAgent:
                     continue
             
                 text = shape.text.strip()
-                if text.startswith("{{") and text.endswith("}}"):
-                    path = text[2:-2].strip()  # 去掉 {{}}
-                    content_type = "text"
+                
+                # 检查是否包含占位符
+                if "{{" in text and "}}" in text:
+                    # 检查是否为纯占位符
+                    pure_placeholder = is_pure_placeholder(text)
+                    
+                    if pure_placeholder:
+                        # 纯占位符模式（原有逻辑）
+                        path = pure_placeholder
+                        content_type = "text"
 
-                    # 判断类型前缀
-                    if path.startswith("@"):
-                        path = path[1:]
-                        content_type = "image"
-                    elif path.startswith("#"):
-                        # 表格已经在上面处理过了，跳过
-                        continue
+                        # 判断类型前缀
+                        if path.startswith("@"):
+                            path = path[1:]
+                            content_type = "image"
+                        elif path.startswith("#"):
+                            # 表格已经在上面处理过了，跳过
+                            continue
 
-                    value = get_value_by_path(processed_data, path)
-                    if value is None:
-                        continue
+                        value = get_value_by_path(processed_data, path)
+                        if value is None:
+                            continue
 
-                    if content_type == "text":
-                        # 检查是否包含Markdown格式
-                        if isinstance(value, str) and any(marker in value for marker in ['*', '#', '`', '\n']):
-                            # 使用Markdown解析
-                            parse_markdown_text(shape.text_frame, value)
-                        elif isinstance(value, list):
-                            # 处理列表数据，每项作为bullet point
-                            tf = shape.text_frame
-                            tf.clear()
-                            for i, item in enumerate(value):
-                                p = tf.add_paragraph() if i > 0 else tf.paragraphs[0]
-                                if isinstance(item, str) and any(marker in item for marker in ['*', '#', '`']):
-                                    apply_inline_formatting(p, item)
-                                else:
-                                    p.text = str(item)
-                                    p.font.size = Pt(14)
-                                    p.alignment = PP_ALIGN.LEFT
-                                    enable_bullet(p)
-                        else:
-                            # 普通文本
-                            shape.text_frame.text = str(value)
+                        if content_type == "text":
+                            # 检查是否包含Markdown格式
+                            if isinstance(value, str) and any(marker in value for marker in ['*', '#', '`', '\n']):
+                                # 使用Markdown解析
+                                parse_markdown_text(shape.text_frame, value)
+                            elif isinstance(value, list):
+                                # 处理列表数据，每项作为bullet point
+                                tf = shape.text_frame
+                                tf.clear()
+                                for i, item in enumerate(value):
+                                    p = tf.add_paragraph() if i > 0 else tf.paragraphs[0]
+                                    if isinstance(item, str) and any(marker in item for marker in ['*', '#', '`']):
+                                        apply_inline_formatting(p, item)
+                                    else:
+                                        p.text = str(item)
+                                        p.font.size = Pt(14)
+                                        p.alignment = PP_ALIGN.LEFT
+                                        enable_bullet(p)
+                            else:
+                                # 普通文本
+                                shape.text_frame.text = str(value)
 
-                    elif content_type == "image":
-                        # 获取位置并删除原文本框
-                        left, top, width, height = shape.left, shape.top, shape.width, shape.height
-                        slide.shapes._spTree.remove(shape._element)
-                            
-                        # 确保图片路径存在
-                        if os.path.exists(value):
-                            slide.shapes.add_picture(value, left, top, width=width, height=height)
-                            print(f"成功替换图片: {path}")
-                        else:
-                            print(f"警告: 图片文件不存在: {value}")
+                        elif content_type == "image":
+                            # 获取位置并删除原文本框
+                            left, top, width, height = shape.left, shape.top, shape.width, shape.height
+                            slide.shapes._spTree.remove(shape._element)
+                                
+                            # 确保图片路径存在
+                            if os.path.exists(value):
+                                slide.shapes.add_picture(value, left, top, width=width, height=height)
+                                print(f"成功替换图片: {path}")
+                            else:
+                                print(f"警告: 图片文件不存在: {value}")
+                    
+                    else:
+                        # 混合文本模式（新功能）
+                        replaced_text = replace_mixed_placeholders(text, processed_data)
+                        shape.text_frame.text = replaced_text
+                        print(f"混合文本替换: '{text}' -> '{replaced_text}'")
 
-        # 保存为新PPT
-        prs.save(output_file_path)
+        # 根据输出格式处理结果
+        result = None
+        temp_output_path = None
         
-        # 清理临时文件
-        for temp_file in temp_files:
-            try:
-                os.unlink(temp_file)
-                print(f"清理临时文件: {temp_file}")
-            except Exception as e:
-                print(f"清理临时文件失败: {temp_file}, 错误: {e}")
+        try:
+            if output_format == "local":
+                # 直接保存到指定路径
+                prs.save(output_file_path)
+                print(f"✅ PPT已保存到: {output_file_path}")
+                result = output_file_path
+                
+            elif output_format == "base64":
+                # 保存到临时文件，然后转换为base64
+                temp_fd, temp_output_path = tempfile.mkstemp(suffix='.pptx')
+                os.close(temp_fd)
+                temp_files.append(temp_output_path)
+                
+                prs.save(temp_output_path)
+                
+                # 读取文件并转换为base64
+                with open(temp_output_path, 'rb') as f:
+                    file_bytes = f.read()
+                    base64_str = base64.b64encode(file_bytes).decode('utf-8')
+                
+                print(f"✅ PPT已转换为base64格式 (大小: {len(base64_str)} 字符)")
+                result = base64_str
+                
+            elif output_format == "url":
+                # 保存到临时文件，然后上传
+                temp_fd, temp_output_path = tempfile.mkstemp(suffix='.pptx')
+                os.close(temp_fd)
+                temp_files.append(temp_output_path)
+                
+                prs.save(temp_output_path)
+                
+                # 创建上传器并上传文件
+                uploader = SimpleFileUploader(personal_auth_key, personal_auth_secret, base_url)
+                
+                # 生成文件名
+                filename = f"filled_presentation_{os.path.basename(temp_output_path)}"
+                
+                with open(temp_output_path, 'rb') as f:
+                    upload_result = uploader.upload(f, filename)
+                
+                if upload_result.get("success"):
+                    print(f"✅ PPT已上传成功，文件ID: {base_url}/api/fs/{upload_result['fileId']}")
+                    result = {
+                        "fileId": upload_result['fileId'],
+                        "fileUrl": f"{base_url}/api/fs/{upload_result['fileId']}"
+                    }
+                else:
+                    raise Exception(f"文件上传失败: {upload_result.get('error', '未知错误')}")
+            
+        finally:
+            # 清理临时文件（包括下载的图片、模板文件和输出临时文件）
+            for temp_file in temp_files:
+                try:
+                    cleanup_temp_file(temp_file)
+                    print(f"清理临时文件: {temp_file}")
+                except Exception as e:
+                    print(f"清理临时文件失败: {temp_file}, 错误: {e}")
+        
+        return result
