@@ -102,7 +102,7 @@ def main():
 
     graph.add_edge("pdf2md1", "confirmreply1", "finish", "switchAny")
     graph.add_edge("pdf2md1", "addMemoryVariable1", "pdf2mdResult", "pdf2md1_pdf2mdResult")
-    
+
     graph.add_edge("confirmreply1", "ai1", "finish", "switchAny")
 
     graph.add_edge("ai1", "addMemoryVariable1", "answerText", "ai1_answerText")

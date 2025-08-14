@@ -9,7 +9,7 @@ def main():
     ds_agent = DSAgent()
     result = ds_agent.analyze_csv(
         user_query="请帮我进行数据分析", 
-        file_path="playground/test_workspace/data.csv",
+        file_path="playground/test_workspace/data/季度新媒体成绩_cleaned.csv",
         verbose=True
     )
     print(result)

@@ -7,9 +7,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 from src.autoagentsai.client import ChatClient
 
 client = ChatClient(
-    agent_id="90b60436c09b43e5b6d05a31abf8c662",
-    personal_auth_key="e7a964a7e754413a9ea4bc1395a38d39",
-    personal_auth_secret="r4wBtqVD1qjItzQapJudKQPFozHAS9eb"
+    agent_id="7e46d18945fc49379063e3057a143c58",
+    personal_auth_key="339859fa69934ea8b2b0ebd19d94d7f1",
+    personal_auth_secret="93TsBecJplOawEipqAdF7TJ0g4IoBMtA"
 )
 
 for event in client.invoke(prompt="人工智能的历史"):

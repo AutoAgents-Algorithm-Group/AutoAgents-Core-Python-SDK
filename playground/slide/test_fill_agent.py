@@ -37,12 +37,12 @@ def test_local_output():
                 ]
             },
             {
-                "page_number": 3,
+                "page_number": 4,
                 "title": "系统架构",
                 "table": "playground/test_workspace/data.csv"
             },
             {
-                "page_number": 4,
+                "page_number": 3,
                 "title": "商品列表",
                 "table": [
                     {
