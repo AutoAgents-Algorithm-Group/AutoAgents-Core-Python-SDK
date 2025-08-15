@@ -1,246 +1,101 @@
 #!/usr/bin/env python3
 """
-FillAgent 独立填充代理使用示例
+测试嵌套JSON结构的PPT填充
 """
 
 import sys
 import os
 
 # 添加项目根目录到路径
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-sys.path.insert(0, project_root)
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.autoagentsai.slide.FillAgent import FillAgent
 
+def main():
+    """主测试函数"""
+    print("🧪 测试嵌套JSON结构PPT填充")
+    print("=" * 50)
 
-def test_local_output():
-    """测试本地文件输出格式"""
-    
-    # 创建填充代理
-    fill_agent = FillAgent()
-    
-    # 示例数据
+    # 测试数据 - 嵌套JSON结构
     data = {
-        "page": [
-            { 
-                "page_number": 1,
-                "title": "智能排班系统",
-                "subtitle": "提升工作效率的解决方案",
-                "logo": "company_logo.png"
+        "user": {
+            "nickname": "frank",
+            "age": 21,
+            "department": "技术部",
+            "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
+            "hobbies": ["编程", "阅读", "游泳", "摄影"],
+            "skills": ["Python", "JavaScript", "React", "机器学习"],
+            "contact": {
+                "email": "frank@company.com",
+                "phone": "13800138000"
             },
-            { 
-                "page_number": 2,
-                "title": "核心需求",
-                "sections": [
-                    { "title": "精准计算", "content": "基于AI算法的精确计算，确保排班公平性和效率" },
-                    { "title": "自动排班", "content": "智能化排班系统，减少人工干预，提高管理效率" }
-                ]
-            },
-            {
-                "page_number": 4,
-                "title": "系统架构",
-                "table": "playground/test_workspace/data.csv"
-            },
-            {
-                "page_number": 3,
-                "title": "商品列表",
-                "table": [
-                    {
-                        "count": 4,
-                        "name": "**高级墙纸**",
-                        "desc": "* 书房专用\n* 卧室适配\n* `防水材质`",
-                        "discount": 1500,
-                        "tax": 27,
-                        "price": 400,
-                        "totalPrice": 1600,
-                        "picture": "globe.png"
-                    },
-                    {
-                        "count": 2,
-                        "name": "*经典地板*",
-                        "desc": "* 客厅铺设\n* **耐磨**材质\n* `环保认证`",
-                        "discount": 800,
-                        "tax": 15,
-                        "price": 600,
-                        "totalPrice": 1200,
-                        "picture": "floor.png"
-                    }
-                ]
+            "dad": {
+                "nickname": "frank-dad",
+                "age": 45,
+                "job": {
+                    "title": "高级工程师",
+                    "company": "科技集团"
+                }
             }
-        ]
+        },
+        "company": {
+            "name": "创新科技公司",
+            "logo": "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=200&fit=crop"
+        },
+        "family": {
+            "photo": "https://images.unsplash.com/photo-1511895426328-dc8714191300?w=400&h=300&fit=crop",
+            "members": [
+                {"name": "frank", "role": "儿子", "age": 21},
+                {"name": "frank-dad", "role": "父亲", "age": 45},
+                {"name": "mom", "role": "母亲", "age": 42}
+            ]
+        },
+        "work": {
+            "current_project": {
+                "name": "AI助手系统",
+                "manager": "张经理",
+                "progress": 75,
+                "deadline": "2024-06-30"
+            },
+            "projects": [
+                {"name": "项目A", "status": "已完成", "progress": 100},
+                {"name": "项目B", "status": "进行中", "progress": 60},
+                {"name": "项目C", "status": "计划中", "progress": 0}
+            ]
+        },
+        "evaluation": {
+            "score": 95,
+            "comment": "表现优秀，技术能力强，团队合作佳"
+        }
     }
     
-    template_path = "playground/test_workspace/template/test.pptx"
-    output_path = "playground/test_workspace/output_local.pptx"
-    
-    try:
-        result = fill_agent.fill(data, template_path, output_path, output_format="local")
-        print(f"✅ 本地文件输出完成: {result}")
-    except Exception as e:
-        print(f"❌ 本地文件输出失败: {e}")
-
-
-def test_base64_output():
-    """测试base64输出格式"""
-    
-    # 创建填充代理
+    # 创建FillAgent
     fill_agent = FillAgent()
     
-    # 简化的测试数据
-    data = {
-        "page": [
-            { 
-                "page_number": 1,
-                "title": "智能排班系统",
-                "subtitle": "提升工作效率的解决方案",
-                "logo": "company_logo.png"
-            },
-            { 
-                "page_number": 2,
-                "title": "核心需求",
-                "sections": [
-                    { "title": "精准计算", "content": "基于AI算法的精确计算，确保排班公平性和效率" },
-                    { "title": "自动排班", "content": "智能化排班系统，减少人工干预，提高管理效率" }
-                ]
-            },
-            {
-                "page_number": 3,
-                "title": "系统架构",
-                "table": "playground/test_workspace/data.csv"
-            },
-            {
-                "page_number": 4,
-                "title": "商品列表",
-                "table": [
-                    {
-                        "count": 4,
-                        "name": "**高级墙纸**",
-                        "desc": "* 书房专用\n* 卧室适配\n* `防水材质`",
-                        "discount": 1500,
-                        "tax": 27,
-                        "price": 400,
-                        "totalPrice": 1600,
-                        "picture": "globe.png"
-                    },
-                    {
-                        "count": 2,
-                        "name": "*经典地板*",
-                        "desc": "* 客厅铺设\n* **耐磨**材质\n* `环保认证`",
-                        "discount": 800,
-                        "tax": 15,
-                        "price": 600,
-                        "totalPrice": 1200,
-                        "picture": "floor.png"
-                    }
-                ]
-            }
-        ]
-    }
-    
-    template_path = "https://pefile.oss-cn-beijing.aliyuncs.com/frank/test.pptx"
+    # 模板和输出路径
+    template_path = "playground/test_workspace/test_template.pptx"
+    output_path = "playground/test_workspace/test_output.pptx"
     
     try:
-        result = fill_agent.fill(data, template_path, output_format="base64")
-        print(f"✅ Base64输出完成 (长度: {len(result)} 字符)")
-        print(f"Base64前缀: {result}...")
-    except Exception as e:
-        print(f"❌ Base64输出失败: {e}")
-
-
-def test_url_output():
-    """测试URL上传输出格式"""
-    
-    # 创建填充代理
-    fill_agent = FillAgent()
-    
-    # 简化的测试数据
-    data = {
-        "page": [
-            { 
-                "page_number": 1,
-                "title": "智能排班系统",
-                "subtitle": "提升工作效率的解决方案",
-                "logo": "company_logo.png"
-            },
-            { 
-                "page_number": 2,
-                "title": "核心需求",
-                "sections": [
-                    { "title": "精准计算", "content": "基于AI算法的精确计算，确保排班公平性和效率" },
-                    { "title": "自动排班", "content": "智能化排班系统，减少人工干预，提高管理效率" }
-                ]
-            },
-            {
-                "page_number": 3,
-                "title": "系统架构",
-                "table": "playground/test_workspace/data.csv"
-            },
-            {
-                "page_number": 4,
-                "title": "商品列表",
-                "table": [
-                    {
-                        "count": 4,
-                        "name": "**高级墙纸**",
-                        "desc": "* 书房专用\n* 卧室适配\n* `防水材质`",
-                        "discount": 1500,
-                        "tax": 27,
-                        "price": 400,
-                        "totalPrice": 1600,
-                        "picture": "globe.png"
-                    },
-                    {
-                        "count": 2,
-                        "name": "*经典地板*",
-                        "desc": "* 客厅铺设\n* **耐磨**材质\n* `环保认证`",
-                        "discount": 800,
-                        "tax": 15,
-                        "price": 600,
-                        "totalPrice": 1200,
-                        "picture": "floor.png"
-                    }
-                ]
-            }
-        ]
-    }
-    
-    template_path = "https://pefile.oss-cn-beijing.aliyuncs.com/frank/test.pptx"
-    
-    # 这里需要真实的JWT token，示例中使用占位符
-    personal_auth_key = "7217394b7d3e4becab017447adeac239"  # 请替换为真实的JWT token
-    personal_auth_secret = "f4Ziua6B0NexIMBGj1tQEVpe62EhkCWB"  # 请替换为真实的JWT token
-    
-    try:
+        print(f"\n🔍 开始填充PPT...")
+        print(f"模板: {template_path}")
+        print(f"输出: {output_path}")
+        
         result = fill_agent.fill(
-            data, 
-            template_path, 
-            output_format="url",
-            personal_auth_key=personal_auth_key,
-            personal_auth_secret=personal_auth_secret
+            data=data,
+            template_file_path=template_path,
+            output_file_path=output_path,
+            output_format="local"
         )
-        print(f"✅ URL上传完成:")
-        print(f"  文件ID: {result.get('fileId')}")
-        print(f"  文件名: {result.get('fileName')}")
-        print(f"  文件类型: {result.get('fileType')}")
+        
+        print(f"\n✅ PPT填充成功!")
+        print(f"📄 输出文件: {result}")
+        print(f"\n💡 请打开 {output_path} 查看结果")
+        
     except Exception as e:
-        print(f"❌ URL上传失败: {e}")
-        if "jwt_token" in str(e):
-            print("  注意: 需要提供有效的JWT token才能测试URL上传功能")
-
+        print(f"❌ 填充失败: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    print("=== FillAgent 多种输出格式测试 ===\n")
-    
-    print("1. 测试本地文件输出...")
-    test_local_output()
-    print()
-    
-    print("2. 测试Base64输出...")
-    test_base64_output()
-    print()
-    
-    print("3. 测试URL上传输出...")
-    test_url_output()
-    print()
- 
-    print("=== 测试完成 ===")
+    main()

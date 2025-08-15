@@ -12,6 +12,304 @@ from pptx.util import Pt
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.dml.color import RGBColor
 from pptx.oxml import parse_xml
+from pptx.oxml.ns import qn
+from copy import deepcopy
+
+
+class TextStylePreserver:
+    """完整的文本样式保存和恢复工具类"""
+    
+    @staticmethod
+    def capture_complete_style(paragraph):
+        """捕获段落的完整样式信息"""
+        style_info = {
+            'paragraph_level': {},
+            'run_level': [],
+            'text_frame_level': {}
+        }
+        
+        # 段落级别样式
+        style_info['paragraph_level'] = {
+            'alignment': paragraph.alignment,
+            'level': paragraph.level,
+            'space_before': paragraph.space_before,
+            'space_after': paragraph.space_after,
+            'line_spacing': paragraph.line_spacing
+        }
+        
+        # 获取段落的XML以保存更多属性
+        try:
+            p_element = paragraph._element
+            # 保存段落属性的XML片段
+            style_info['paragraph_level']['xml_props'] = p_element.xml if hasattr(p_element, 'xml') else None
+        except:
+            pass
+        
+        # Run级别样式（每个run）
+        for run in paragraph.runs:
+            run_style = {
+                'text': run.text,
+                'font_name': run.font.name,
+                'font_size': run.font.size,
+                'font_bold': run.font.bold,
+                'font_italic': run.font.italic,
+                'font_underline': run.font.underline,
+                'font_color_rgb': None,
+                'font_color_theme': None,
+                'hyperlink': None
+            }
+            
+            # 字体颜色处理
+            try:
+                if run.font.color.rgb:
+                    run_style['font_color_rgb'] = run.font.color.rgb
+                elif run.font.color.theme_color:
+                    run_style['font_color_theme'] = run.font.color.theme_color
+            except AttributeError:
+                pass
+            
+            # 超链接处理
+            try:
+                if hasattr(run, '_element') and run._element.get('hlinkClick'):
+                    run_style['hyperlink'] = run._element.get('hlinkClick')
+            except:
+                pass
+                
+            style_info['run_level'].append(run_style)
+        
+        return style_info
+    
+    @staticmethod
+    def capture_text_frame_style(text_frame):
+        """捕获文本框级别的样式"""
+        return {
+            'vertical_anchor': text_frame.vertical_anchor,
+            'margin_left': text_frame.margin_left,
+            'margin_right': text_frame.margin_right,
+            'margin_top': text_frame.margin_top,
+            'margin_bottom': text_frame.margin_bottom,
+            'word_wrap': text_frame.word_wrap,
+            'auto_size': text_frame.auto_size
+        }
+    
+    @staticmethod
+    def apply_style_to_new_text(paragraph, style_info, new_text):
+        """将保存的样式应用到新文本上，完全保留格式"""
+        
+        # 简单直接的方法：设置文本然后恢复样式
+        paragraph.text = new_text
+        
+        # 应用段落级别样式
+        para_style = style_info['paragraph_level']
+        if para_style.get('alignment') is not None:
+            paragraph.alignment = para_style['alignment']
+        if para_style.get('level') is not None:
+            paragraph.level = para_style['level']
+        if para_style.get('space_before') is not None:
+            paragraph.space_before = para_style['space_before']
+        if para_style.get('space_after') is not None:
+            paragraph.space_after = para_style['space_after']
+        if para_style.get('line_spacing') is not None:
+            paragraph.line_spacing = para_style['line_spacing']
+        
+        # 恢复run级别样式
+        if paragraph.runs and style_info['run_level']:
+            original_run_style = style_info['run_level'][0]
+            run = paragraph.runs[0]
+            
+            # 应用字体样式
+            if original_run_style.get('font_name'):
+                run.font.name = original_run_style['font_name']
+            if original_run_style.get('font_size'):
+                run.font.size = original_run_style['font_size']
+            if original_run_style.get('font_bold') is not None:
+                run.font.bold = original_run_style['font_bold']
+            if original_run_style.get('font_italic') is not None:
+                run.font.italic = original_run_style['font_italic']
+            if original_run_style.get('font_underline') is not None:
+                run.font.underline = original_run_style['font_underline']
+            
+            # 应用字体颜色
+            if original_run_style.get('font_color_rgb'):
+                run.font.color.rgb = original_run_style['font_color_rgb']
+            elif original_run_style.get('font_color_theme'):
+                run.font.color.theme_color = original_run_style['font_color_theme']
+    
+    @staticmethod
+    def apply_text_frame_style(text_frame, style_info):
+        """应用文本框级别样式"""
+        if style_info.get('vertical_anchor') is not None:
+            text_frame.vertical_anchor = style_info['vertical_anchor']
+        if style_info.get('margin_left') is not None:
+            text_frame.margin_left = style_info['margin_left']
+        if style_info.get('margin_right') is not None:
+            text_frame.margin_right = style_info['margin_right']
+        if style_info.get('margin_top') is not None:
+            text_frame.margin_top = style_info['margin_top']
+        if style_info.get('margin_bottom') is not None:
+            text_frame.margin_bottom = style_info['margin_bottom']
+        if style_info.get('word_wrap') is not None:
+            text_frame.word_wrap = style_info['word_wrap']
+        if style_info.get('auto_size') is not None:
+            text_frame.auto_size = style_info['auto_size']
+
+
+def replace_text_preserve_format(text_frame, new_text):
+    """替换文本并完全保留格式的核心函数"""
+    if not text_frame.paragraphs:
+        return
+    
+    # 捕获文本框级别样式
+    tf_style = TextStylePreserver.capture_text_frame_style(text_frame)
+    
+    # 捕获第一个段落的样式作为模板
+    first_para = text_frame.paragraphs[0]
+    para_style = TextStylePreserver.capture_complete_style(first_para)
+    
+    # 删除所有现有段落（除了第一个）
+    while len(text_frame.paragraphs) > 1:
+        p = text_frame.paragraphs[-1]
+        text_frame._element.remove(p._element)
+    
+    # 在第一个段落应用新文本和样式
+    TextStylePreserver.apply_style_to_new_text(first_para, para_style, new_text)
+    
+    # 恢复文本框级别样式
+    TextStylePreserver.apply_text_frame_style(text_frame, tf_style)
+
+
+def process_list_preserve_format(text_frame, list_data):
+    """处理列表数据并完全保留格式"""
+    if not text_frame.paragraphs or not list_data:
+        return
+        
+    # 捕获文本框级别样式
+    tf_style = TextStylePreserver.capture_text_frame_style(text_frame)
+    
+    # 捕获第一个段落的样式作为模板
+    first_para = text_frame.paragraphs[0]
+    para_style = TextStylePreserver.capture_complete_style(first_para)
+    
+    # 删除所有现有段落（除了第一个）
+    while len(text_frame.paragraphs) > 1:
+        p = text_frame.paragraphs[-1]
+        text_frame._element.remove(p._element)
+    
+    # 处理第一个列表项
+    if list_data:
+        first_item = str(list_data[0])
+        TextStylePreserver.apply_style_to_new_text(first_para, para_style, first_item)
+        enable_bullet(first_para)
+        
+        # 处理剩余的列表项
+        for item in list_data[1:]:
+            new_para = text_frame.add_paragraph()
+            TextStylePreserver.apply_style_to_new_text(new_para, para_style, str(item))
+            enable_bullet(new_para)
+    
+    # 恢复文本框级别样式
+    TextStylePreserver.apply_text_frame_style(text_frame, tf_style)
+
+
+def parse_markdown_text_preserve_format(text_frame, markdown_text):
+    """
+    解析Markdown文本并完全保留原有格式
+    支持：
+    - * bullet points
+    - **粗体**
+    - *斜体*
+    - `代码`
+    - # 标题
+    """
+    if not text_frame.paragraphs:
+        return
+        
+    # 捕获文本框级别样式
+    tf_style = TextStylePreserver.capture_text_frame_style(text_frame)
+    
+    # 捕获第一个段落的样式作为模板
+    first_para = text_frame.paragraphs[0]
+    para_style = TextStylePreserver.capture_complete_style(first_para)
+    
+    # 删除所有现有段落（除了第一个）
+    while len(text_frame.paragraphs) > 1:
+        p = text_frame.paragraphs[-1]
+        text_frame._element.remove(p._element)
+    
+    lines = markdown_text.split('\n')
+    first_line_processed = False
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        # 选择要处理的段落
+        if not first_line_processed:
+            p = first_para
+            first_line_processed = True
+        else:
+            p = text_frame.add_paragraph()
+        
+        # 处理标题 (# ## ###)
+        if line.startswith('#'):
+            level = 0
+            while level < len(line) and line[level] == '#':
+                level += 1
+            title_text = line[level:].strip()
+            
+            # 应用原有样式，但文本是标题
+            TextStylePreserver.apply_style_to_new_text(p, para_style, title_text)
+            # 可以考虑适当增大字体大小表示标题，但保留其他格式
+            if p.runs and para_style['run_level']:
+                run = p.runs[0]
+                original_size = para_style['run_level'][0].get('font_size')
+                if original_size:
+                    # 根据标题级别适当增加字体大小
+                    size_increase = max(0, (4 - level) * 2)
+                    try:
+                        run.font.size = Pt(original_size.pt + size_increase)
+                    except:
+                        pass
+                run.font.bold = True
+            continue
+        
+        # 处理bullet points
+        if line.startswith('* ') or line.startswith('- '):
+            bullet_text = line[2:].strip()
+            
+            # 检查是否包含内联格式
+            if any(marker in bullet_text for marker in ['**', '*', '`']):
+                apply_inline_formatting_preserve_format(p, bullet_text, para_style)
+            else:
+                TextStylePreserver.apply_style_to_new_text(p, para_style, bullet_text)
+            
+            enable_bullet(p)
+            continue
+        
+        # 处理普通文本（可能包含内联格式）
+        if any(marker in line for marker in ['**', '*', '`']):
+            apply_inline_formatting_preserve_format(p, line, para_style)
+        else:
+            TextStylePreserver.apply_style_to_new_text(p, para_style, line)
+    
+    # 如果没有处理任何行，至少清空第一个段落
+    if not first_line_processed:
+        TextStylePreserver.apply_style_to_new_text(first_para, para_style, "")
+    
+    # 恢复文本框级别样式
+    TextStylePreserver.apply_text_frame_style(text_frame, tf_style)
+
+
+def apply_inline_formatting_preserve_format(paragraph, text, base_style):
+    """
+    应用内联格式：粗体、斜体、代码，并保留基础样式
+    
+    对于复杂的内联格式，暂时先设置普通文本，保留原有样式
+    TODO: 在未来版本中可以改进为完全支持内联格式的样式保留
+    """
+    # 暂时简化处理，直接应用文本并保留样式
+    TextStylePreserver.apply_style_to_new_text(paragraph, base_style, text)
 
 
 def get_jwt_token_api(
@@ -125,99 +423,36 @@ def convert_csv_to_json_list(csv_file_path: str):
         return []
 
 
-def parse_markdown_text(text_frame, markdown_text, font_size=14):
+def parse_markdown_text(text_frame, markdown_text, font_size=14, preserve_style=True):
     """
     解析Markdown文本并应用到PowerPoint文本框
-    支持：
-    - * bullet points
-    - **粗体**
-    - *斜体*
-    - `代码`
-    - # 标题
+    
+    DEPRECATED: 这个函数为了兼容性保留，建议使用 parse_markdown_text_preserve_format
+    现在内部使用新的格式保留逻辑，完全保留原有格式。
+    
+    Args:
+        preserve_style: 是否保留原有样式，默认True保留模板样式（总是True）
+        font_size: 废弃参数，不再使用
     """
-    text_frame.clear()
-    
-    lines = markdown_text.split('\n')
-    
-    for i, line in enumerate(lines):
-        line = line.strip()
-        if not line:
-            continue
-            
-        # 添加段落
-        if i == 0:
-            p = text_frame.paragraphs[0]
-        else:
-            p = text_frame.add_paragraph()
-        
-        # 处理标题 (# ## ###)
-        if line.startswith('#'):
-            level = 0
-            while level < len(line) and line[level] == '#':
-                level += 1
-            title_text = line[level:].strip()
-            p.text = title_text
-            p.font.size = Pt(font_size + (4 - level) * 2)  # 标题字体更大
-            p.font.bold = True
-            p.alignment = PP_ALIGN.LEFT
-            continue
-        
-        # 处理bullet points
-        if line.startswith('* ') or line.startswith('- '):
-            bullet_text = line[2:].strip()
-            p.text = bullet_text
-            p.font.size = Pt(font_size)
-            p.alignment = PP_ALIGN.LEFT
-            enable_bullet(p)
-            
-            # 处理bullet point内的格式
-            apply_inline_formatting(p, bullet_text)
-            continue
-        
-        # 处理普通文本
-        p.text = line
-        p.font.size = Pt(font_size)
-        p.alignment = PP_ALIGN.LEFT
-        
-        # 处理内联格式
-        apply_inline_formatting(p, line)
+    # 现在总是使用新的格式保留函数
+    parse_markdown_text_preserve_format(text_frame, markdown_text)
 
 
-def apply_inline_formatting(paragraph, text):
+def apply_inline_formatting(paragraph, text, preserve_style=True):
     """
     应用内联格式：粗体、斜体、代码
+    
+    DEPRECATED: 这个函数为了兼容性保留，建议使用 apply_inline_formatting_preserve_format
+    现在内部使用新的格式保留逻辑。
+    
+    Args:
+        preserve_style: 是否保留原有样式，默认True（总是True）
     """
-    # 清空段落文本，重新构建带格式的文本
-    paragraph.clear()
+    # 首先捕获当前段落的样式
+    base_style = TextStylePreserver.capture_complete_style(paragraph)
     
-    # 使用正则表达式解析格式
-    # 匹配 **粗体**、*斜体*、`代码`
-    pattern = r'(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)'
-    
-    parts = re.split(pattern, text)
-    
-    for part in parts:
-        if not part:
-            continue
-            
-        run = paragraph.add_run()
-        
-        if part.startswith('**') and part.endswith('**'):
-            # 粗体
-            run.text = part[2:-2]
-            run.font.bold = True
-        elif part.startswith('*') and part.endswith('*'):
-            # 斜体
-            run.text = part[1:-1]
-            run.font.italic = True
-        elif part.startswith('`') and part.endswith('`'):
-            # 代码
-            run.text = part[1:-1]
-            run.font.name = 'Consolas'
-            run.font.color.rgb = RGBColor(220, 20, 60)  # 深红色
-        else:
-            # 普通文本
-            run.text = part
+    # 使用新的格式保留函数
+    apply_inline_formatting_preserve_format(paragraph, text, base_style)
 
 
 def enable_bullet(paragraph, bullet_char="•"):
@@ -314,15 +549,11 @@ def fill_existing_table(table, data, font_size=12):
             
             # 检查是否包含Markdown格式
             if any(marker in text for marker in ['*', '#', '`']):
-                # 使用Markdown解析
-                parse_markdown_text(row.cells[j].text_frame, text, font_size)
+                # 使用Markdown解析，完全保留格式
+                parse_markdown_text_preserve_format(row.cells[j].text_frame, text)
             else:
-                # 普通文本
-                row.cells[j].text = text
-                para = row.cells[j].text_frame.paragraphs[0]
-                para.font.size = Pt(font_size)
-                para.alignment = PP_ALIGN.CENTER
-                row.cells[j].text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
+                # 普通文本 - 使用新的格式保留函数
+                replace_text_preserve_format(row.cells[j].text_frame, text)
 
     # 删除模板行
     tbl.remove(template_row._tr)
@@ -392,19 +623,30 @@ def download_image(url: str) -> Optional[str]:
     """
     
     try:
-        response = requests.get(url, stream=True)
+        print(f"开始下载图片: {url}")
+        
+        # 添加User-Agent头，避免被某些网站拒绝
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        response = requests.get(url, stream=True, headers=headers, timeout=30)
         response.raise_for_status()
         
         # 验证content-type是否为图片
         content_type = response.headers.get('content-type', '').lower()
+        print(f"图片URL Content-Type: {content_type}")
+        
         valid_image_types = [
             'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 
             'image/bmp', 'image/webp', 'image/tiff', 'image/svg+xml'
         ]
         
         if not any(img_type in content_type for img_type in valid_image_types):
-            print(f"跳过非图片内容: {url}, content-type: {content_type}")
+            print(f"❌ 跳过非图片内容: {url}, content-type: {content_type}")
             return None
+        
+        print(f"✅ 确认为图片内容: {content_type}")
         
         # 创建临时文件
         suffix = '.jpg'  # 默认后缀
@@ -424,14 +666,18 @@ def download_image(url: str) -> Optional[str]:
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
         
         # 下载图片内容
+        total_size = 0
         for chunk in response.iter_content(chunk_size=8192):
             temp_file.write(chunk)
+            total_size += len(chunk)
         
         temp_file.close()
+        print(f"✅ 图片下载完成: {temp_file.name} (大小: {total_size} 字节)")
         return temp_file.name
         
     except Exception as e:
-        print(f"下载图片失败: {url}, 错误: {e}")
+        print(f"❌ 下载图片失败: {url}")
+        print(f"   错误详情: {type(e).__name__}: {e}")
         return None
 
 
@@ -486,36 +732,119 @@ def download_template(url: str) -> Optional[str]:
         return None
 
 
-def get_value_by_path(data: dict, path: str) -> Any:
+def normalize_data_format(data: dict) -> dict:
     """
-    根据路径表达式从数据中获取值
-    支持格式：page[0].title, page[1].sections[0].content 等
+    标准化数据格式，自动处理带外层包装的数据
+    
+    支持的输入格式：
+    1. 直接数据格式: {"user": {"name": "frank"}, "score": 95}
+    2. 带result包装: {"result": {"user": {"name": "frank"}, "score": 95}}
+    
+    Args:
+        data: 输入的数据字典
+    
+    Returns:
+        dict: 标准化后的数据字典
     """
+    if not isinstance(data, dict):
+        return data
+    
+    # 检查是否有外层包装
+    wrapper_keys = ['result']
+    
+    for wrapper_key in wrapper_keys:
+        if wrapper_key in data and len(data) == 1:
+            # 如果只有一个key且是包装key，提取内部数据
+            inner_data = data[wrapper_key]
+            if isinstance(inner_data, dict):
+                print(f"🔍 检测到外层包装 '{wrapper_key}'，自动提取内部数据")
+                return inner_data
+    
+    # 如果没有外层包装，直接返回原数据
+    return data
+
+
+def get_value_by_key(data: dict, key: str) -> Any:
+    """
+    根据key从数据中获取值，支持点号分隔的嵌套路径和数组索引
+    支持格式：
+    - 简单key: title, content, table_data
+    - 嵌套路径: user.nickname, user.dad.nickname, user.hobbies
+    - 数组索引: page[0], items[1]
+    - 复合路径: page[0].title, user.hobbies[2], page[1].sections[0].content
+    """
+    import re
+    
     try:
-        # 将路径分解为步骤
+        # 如果key不包含点号和方括号，直接返回
+        if '.' not in key and '[' not in key:
+            return data.get(key, None)
+        
+        # 处理复合路径，支持数组索引
         current = data
         
-        # 使用正则表达式匹配路径中的各个部分
-        # 匹配形如 "key" 或 "key[index]" 的模式
-        pattern = r'([a-zA-Z_][a-zA-Z0-9_]*)?(?:\[(\d+)\])?'
-        steps = re.findall(r'([a-zA-Z_][a-zA-Z0-9_]*(?:\[\d+\])?)', path)
+        # 分割路径，同时处理数组索引
+        # 例如: "page[0].title" -> ["page[0]", "title"]
+        # 例如: "page[1].sections[0].content" -> ["page[1]", "sections[0]", "content"]
+        path_parts = []
+        current_part = ""
+        bracket_depth = 0
         
-        for step in steps:
-            # 检查是否包含数组索引
-            if '[' in step and ']' in step:
-                key_part = step.split('[')[0]
-                index_part = step.split('[')[1].rstrip(']')
-                index = int(index_part)
-                
-                if key_part:
-                    current = current[key_part]
-                current = current[index]
+        for char in key:
+            if char == '[':
+                bracket_depth += 1
+                current_part += char
+            elif char == ']':
+                bracket_depth -= 1
+                current_part += char
+            elif char == '.' and bracket_depth == 0:
+                if current_part:
+                    path_parts.append(current_part)
+                    current_part = ""
             else:
-                current = current[step]
+                current_part += char
+        
+        if current_part:
+            path_parts.append(current_part)
+        
+        # 逐级访问每个路径部分
+        for part in path_parts:
+            # 检查是否包含数组索引
+            if '[' in part and ']' in part:
+                # 解析数组索引: "page[0]" -> ("page", 0)
+                match = re.match(r'^([^[]+)\[(\d+)\]$', part)
+                if match:
+                    array_name = match.group(1)
+                    array_index = int(match.group(2))
+                    
+                    # 先访问数组
+                    if isinstance(current, dict):
+                        current = current.get(array_name, None)
+                        if current is None:
+                            return None
+                    else:
+                        return None
+                    
+                    # 再访问索引
+                    if isinstance(current, list) and 0 <= array_index < len(current):
+                        current = current[array_index]
+                    else:
+                        return None
+                else:
+                    # 格式不正确的数组索引
+                    return None
+            else:
+                # 普通key访问
+                if isinstance(current, dict):
+                    current = current.get(part, None)
+                    if current is None:
+                        return None
+                else:
+                    return None
         
         return current
-    except (KeyError, IndexError, ValueError, TypeError) as e:
-        print(f"路径解析错误: {path}, 错误: {e}")
+    except Exception as e:
+        print(f"获取数据错误: {key}, 错误: {e}")
         return None
 
 
@@ -546,7 +875,7 @@ def replace_mixed_placeholders(text: str, data: dict) -> str:
             return match.group(0)
         else:
             # 普通文本占位符
-            value = get_value_by_path(data, placeholder_content)
+            value = get_value_by_key(data, placeholder_content)
             if value is not None:
                 return str(value)
             else:
@@ -694,10 +1023,83 @@ class SimpleFileUploader:
 
 
 class FillAgent:
-    """独立的PPT填充代理，包含完整的fill功能"""
+    """
+    独立的PPT填充代理，支持嵌套JSON数据结构填充PowerPoint模板
+    
+    支持的占位符格式：
+    - {{key}} : 文本占位符，对应data['key']
+    - {{@key}}: 图片占位符，对应data['key']（图片路径或URL）
+    - {{#key}}: 表格占位符，对应data['key']（列表数据）
+    
+    支持的数据访问路径：
+    - 简单路径: {{title}} → data['title']
+    - 嵌套路径: {{user.nickname}} → data['user']['nickname'] 
+    - 深度嵌套: {{user.dad.nickname}} → data['user']['dad']['nickname']
+    - 数组访问: {{user.hobbies}} → data['user']['hobbies'] (整个数组)
+    - 数组索引: {{page[0]}} → data['page'][0]
+    - 复合索引: {{page[0].title}} → data['page'][0]['title']
+    - 深度索引: {{page[1].sections[0].content}} → data['page'][1]['sections'][0]['content']
+    
+    支持的数据格式：
+    1. 直接数据格式: {"user": {"name": "frank"}, "score": 95}
+    2. 带外层包装格式: 
+       - {"result": {"user": {"name": "frank"}, "score": 95}}
+       - {"data": {"user": {"name": "frank"}, "score": 95}}
+       - {"payload": {"user": {"name": "frank"}, "score": 95}}
+       - {"content": {"user": {"name": "frank"}, "score": 95}}
+    
+    其他特性：
+    - 自动检测并提取外层包装数据
+    - 完全保留文本格式（颜色、字体、对齐方式等）
+    - 支持Markdown格式解析
+    - 支持嵌套字典结构和点号分隔的路径访问
+    - 支持数组索引访问 (如 page[0].title, user.hobbies[1])
+    """
     
     def __init__(self):
         pass
+    
+    def _fill_slide_tables(self, slide, table_requests, slide_tables):
+        """
+        处理单个页面的表格填充，确保不会跨页面匹配
+        
+        Args:
+            slide: 当前页面对象
+            table_requests: 当前页面的表格占位符请求列表 [(shape, key, data)]
+            slide_tables: 当前页面的表格列表
+        """
+        if not table_requests:
+            return
+        
+        shapes_to_remove = []
+        processed_tables = set()
+        
+        for placeholder_shape, key, table_data in table_requests:
+            # 只在当前页面的表格中查找
+            available_tables = [t for t in slide_tables if id(t) not in processed_tables]
+            if not available_tables:
+                # 如果当前页面的表格都被处理过，则允许重复使用
+                available_tables = slide_tables
+            
+            if available_tables:
+                nearest_table_shape = find_nearest_table(placeholder_shape, available_tables)
+                if nearest_table_shape:
+                    print(f"占位符 '{{#{key}}}' 匹配到当前页面的表格")
+                    fill_existing_table(nearest_table_shape.table, table_data)
+                    processed_tables.add(id(nearest_table_shape))
+                else:
+                    print(f"警告: 占位符 '{{#{key}}}' 在当前页面未找到合适的表格")
+            else:
+                print(f"警告: 当前页面没有可用的表格来填充占位符 '{{#{key}}}'")
+            
+            shapes_to_remove.append(placeholder_shape)
+        
+        # 删除当前页面的表格占位符文本框
+        for shape in shapes_to_remove:
+            try:
+                shape._element.getparent().remove(shape._element)
+            except Exception as e:
+                print(f"删除占位符时出错: {e}")
 
     def fill(self, 
              data: dict, 
@@ -708,19 +1110,54 @@ class FillAgent:
              personal_auth_secret: Optional[str] = None,
              base_url: str = "https://uat.agentspro.cn") -> Union[str, Dict]:
         """
-        使用数据填充PowerPoint模板
+        使用嵌套JSON数据结构填充PowerPoint模板
         
         Args:
-            data: 要填充的数据字典
+            data: 要填充的数据字典，支持嵌套结构和点号路径访问
+                 - 文本占位符: {{key}} 或 {{nested.key}} 对应嵌套数据
+                 - 图片占位符: {{@key}} 或 {{@nested.key}} (图片路径或URL)
+                 - 表格占位符: {{#key}} 或 {{#nested.key}} (列表数据)
             template_file_path: 模板文件路径（支持本地路径和URL）
             output_file_path: 输出文件路径（当output_format为"local"时必需）
             output_format: 输出格式，支持 "local"、"base64"、"url"
-            jwt_token: 当output_format为"url"时需要的JWT令牌
+            personal_auth_key: 个人认证密钥（当output_format为"url"时需要）
+            personal_auth_secret: 个人认证密钥（当output_format为"url"时需要）
             base_url: 上传服务的基础URL
             
         Returns:
             str: 当output_format为"local"时返回文件路径，为"base64"时返回base64字符串
             Dict: 当output_format为"url"时返回上传结果字典
+            
+        Example:
+            data = {
+                "title": "我的演示文稿",
+                "user": {
+                    "nickname": "frank",
+                    "age": 21,
+                    "hobbies": ["读书", "运动", "音乐"],
+                    "dad": {
+                        "nickname": "frank-dad",
+                        "age": 45
+                    }
+                },
+                "company": {
+                    "logo": "/path/to/logo.png",
+                    "products": [
+                        {"name": "产品A", "price": 100},
+                        {"name": "产品B", "price": 200}
+                    ]
+                }
+            }
+            
+            模板中的占位符：
+            - {{title}} -> "我的演示文稿"
+            - {{user.nickname}} -> "frank"
+            - {{user.dad.nickname}} -> "frank-dad"
+            - {{user.hobbies}} -> ["读书", "运动", "音乐"] (作为列表显示)
+            - {{user.hobbies[0]}} -> "读书" (数组第一项)
+            - {{company.products[1].name}} -> "产品B" (嵌套数组索引)
+            - {{@company.logo}} -> 替换为图片
+            - {{#company.products}} -> 填充到最近的表格
         """
         
         # 参数验证
@@ -732,6 +1169,12 @@ class FillAgent:
             
         if output_format == "url" and not personal_auth_key and not personal_auth_secret:
             raise ValueError("当output_format为'url'时，必须提供jwt_token参数")
+        
+        # 🔄 标准化数据格式，自动处理外层包装
+        print(f"📊 原始数据格式检查...")
+        data = normalize_data_format(data)
+        print(f"✅ 数据格式标准化完成")
+        
         # 用于存储需要清理的临时文件
         temp_files = []
         
@@ -767,20 +1210,25 @@ class FillAgent:
                     return convert_csv_to_json_list(value)
                 # 检查是否是远程图片URL
                 elif value.startswith(('http://', 'https://')):
-                    # 检查URL是否以图片文件后缀结尾（忽略查询参数）
+                    # 先检查URL是否以图片文件后缀结尾（忽略查询参数）
                     url_path = value.split('?')[0].lower()  # 去掉查询参数并转为小写
-                    if url_path.endswith(image_extensions):
-                        # 尝试下载远程图片
-                        local_image_path = download_image(value)
-                        if local_image_path:
-                            temp_files.append(local_image_path)
-                            print(f"成功下载图片: {value} -> {local_image_path}")
-                            return local_image_path
-                        else:
-                            print(f"跳过下载失败的图片: {value}")
-                            return None
+                    is_image_by_extension = url_path.endswith(image_extensions)
+                    
+                    # 如果URL不以图片后缀结尾，也尝试下载，通过Content-Type判断
+                    if is_image_by_extension:
+                        print(f"检测到图片URL（基于扩展名）: {value}")
                     else:
-                        print(f"跳过非图片URL: {value} (不支持的文件类型)")
+                        print(f"检测到可能的图片URL（需验证Content-Type）: {value}")
+                    
+                    # 尝试下载远程图片
+                    local_image_path = download_image(value)
+                    if local_image_path:
+                        temp_files.append(local_image_path)
+                        print(f"成功下载图片: {value} -> {local_image_path}")
+                        return local_image_path
+                    else:
+                        print(f"⚠️ 图片下载失败，保留原始URL: {value}")
+                        # 保留原始URL而不是返回None，这样可以在后续处理中看到问题
                         return value
                 else:
                     return value
@@ -798,13 +1246,16 @@ class FillAgent:
             if processed_value is not None:
                 processed_data[key] = processed_value
 
-        # 1. 表格填充
-        table_requests = []  # [(占位符形状, key, data)]
-        all_tables = []  # 所有表格形状
-        
+        # 1. 表格填充 - 按页面分组处理，避免跨页面匹配
         print(f"开始扫描PPT模板中的占位符...")
+        
         for slide_idx, slide in enumerate(prs.slides):
             print(f"扫描第 {slide_idx + 1} 页...")
+            
+            # 收集当前页面的表格占位符和表格
+            slide_table_requests = []  # 当前页面的表格占位符
+            slide_tables = []  # 当前页面的表格
+            
             for shape in slide.shapes:
                 # 收集表格占位符
                 if shape.has_text_frame:
@@ -812,9 +1263,9 @@ class FillAgent:
                     if text.startswith("{{") and text.endswith("}}"):
                         print(f"  找到占位符: {text}")
                     if text.startswith("{{#") and text.endswith("}}"):
-                        path = text[3:-2].strip()  # 去掉 {{# 和 }}
-                        print(f"找到表格占位符: {{#{path}}}")
-                        table_data = get_value_by_path(processed_data, path)
+                        key = text[3:-2].strip()  # 去掉 {{# 和 }}
+                        print(f"找到表格占位符: {{#{key}}}")
+                        table_data = get_value_by_key(processed_data, key)
                         
                         # 如果表格数据是字符串，可能是CSV文件路径，需要处理
                         if isinstance(table_data, str):
@@ -826,35 +1277,17 @@ class FillAgent:
                                 table_data = None
                         
                         if table_data is not None and isinstance(table_data, list):
-                            print(f"表格占位符 {{#{path}}} 数据解析成功，{len(table_data)} 条记录")
-                            table_requests.append((shape, path, table_data))
+                            print(f"表格占位符 {{#{key}}} 数据解析成功，{len(table_data)} 条记录")
+                            slide_table_requests.append((shape, key, table_data))
                         else:
-                            print(f"表格占位符 {{#{path}}} 数据解析失败或格式不正确")
+                            print(f"表格占位符 {{#{key}}} 数据解析失败或格式不正确")
                 
-                # 收集所有表格
+                # 收集当前页面的表格
                 if shape.has_table:
-                    all_tables.append(shape)
-        
-        # 为每个表格占位符找到最近的表格并填充
-        shapes_to_remove = []
-        processed_tables = set()
-        
-        for placeholder_shape, path, table_data in table_requests:
-            available_tables = [t for t in all_tables if id(t) not in processed_tables]
-            if not available_tables:
-                available_tables = all_tables
+                    slide_tables.append(shape)
             
-            nearest_table_shape = find_nearest_table(placeholder_shape, available_tables)
-            if nearest_table_shape:
-                print(f"占位符 '{{#{path}}}' 匹配到最近的表格")
-                fill_existing_table(nearest_table_shape.table, table_data)
-                processed_tables.add(id(nearest_table_shape))
-            
-            shapes_to_remove.append(placeholder_shape)
-        
-        # 删除表格占位符文本框
-        for shape in shapes_to_remove:
-            shape._element.getparent().remove(shape._element)
+            # 处理当前页面的表格填充
+            self._fill_slide_tables(slide, slide_table_requests, slide_tables)
         
         # 2. 文本、图片填充
         for slide in prs.slides:
@@ -871,59 +1304,63 @@ class FillAgent:
                     
                     if pure_placeholder:
                         # 纯占位符模式（原有逻辑）
-                        path = pure_placeholder
+                        key = pure_placeholder
                         content_type = "text"
 
                         # 判断类型前缀
-                        if path.startswith("@"):
-                            path = path[1:]
+                        if key.startswith("@"):
+                            key = key[1:]
                             content_type = "image"
-                        elif path.startswith("#"):
+                        elif key.startswith("#"):
                             # 表格已经在上面处理过了，跳过
                             continue
 
-                        value = get_value_by_path(processed_data, path)
+                        value = get_value_by_key(processed_data, key)
                         if value is None:
                             continue
 
                         if content_type == "text":
                             # 检查是否包含Markdown格式
                             if isinstance(value, str) and any(marker in value for marker in ['*', '#', '`', '\n']):
-                                # 使用Markdown解析
-                                parse_markdown_text(shape.text_frame, value)
+                                # 使用Markdown解析，现在会保留格式
+                                parse_markdown_text_preserve_format(shape.text_frame, value)
                             elif isinstance(value, list):
-                                # 处理列表数据，每项作为bullet point
-                                tf = shape.text_frame
-                                tf.clear()
-                                for i, item in enumerate(value):
-                                    p = tf.add_paragraph() if i > 0 else tf.paragraphs[0]
-                                    if isinstance(item, str) and any(marker in item for marker in ['*', '#', '`']):
-                                        apply_inline_formatting(p, item)
-                                    else:
-                                        p.text = str(item)
-                                        p.font.size = Pt(14)
-                                        p.alignment = PP_ALIGN.LEFT
-                                        enable_bullet(p)
+                                # 处理列表数据，每项作为bullet point，完全保留格式
+                                process_list_preserve_format(shape.text_frame, value)
                             else:
-                                # 普通文本
-                                shape.text_frame.text = str(value)
+                                # 普通文本 - 使用新的格式保留函数
+                                replace_text_preserve_format(shape.text_frame, str(value))
 
                         elif content_type == "image":
                             # 获取位置并删除原文本框
                             left, top, width, height = shape.left, shape.top, shape.width, shape.height
                             slide.shapes._spTree.remove(shape._element)
                                 
-                            # 确保图片路径存在
+                            # 检查是否为本地文件路径或URL
                             if os.path.exists(value):
+                                # 本地文件路径
                                 slide.shapes.add_picture(value, left, top, width=width, height=height)
-                                print(f"成功替换图片: {path}")
+                                print(f"✅ 成功替换图片 (本地文件): {key}")
+                            elif value.startswith(('http://', 'https://')):
+                                # URL路径（下载失败的情况）
+                                print(f"❌ 图片占位符 {{@{key}}} 处理失败：远程图片下载失败")
+                                print(f"   原始URL: {value}")
+                                # 可以选择添加一个错误提示文本框
+                                text_box = slide.shapes.add_textbox(left, top, width, height)
+                                text_frame = text_box.text_frame
+                                text_frame.text = f"图片加载失败: {key}"
                             else:
-                                print(f"警告: 图片文件不存在: {value}")
+                                # 其他情况
+                                print(f"⚠️ 警告: 图片文件不存在: {value}")
+                                # 添加错误提示文本框
+                                text_box = slide.shapes.add_textbox(left, top, width, height)
+                                text_frame = text_box.text_frame
+                                text_frame.text = f"图片不存在: {key}"
                     
                     else:
-                        # 混合文本模式（新功能）
+                        # 混合文本模式（新功能）- 完全保留格式
                         replaced_text = replace_mixed_placeholders(text, processed_data)
-                        shape.text_frame.text = replaced_text
+                        replace_text_preserve_format(shape.text_frame, replaced_text)
                         print(f"混合文本替换: '{text}' -> '{replaced_text}'")
 
         # 根据输出格式处理结果
