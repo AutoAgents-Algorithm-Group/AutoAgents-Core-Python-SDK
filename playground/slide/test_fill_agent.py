@@ -73,8 +73,8 @@ def main():
     fill_agent = FillAgent()
     
     # 模板和输出路径
-    template_path = "playground/test_workspace/test_template.pptx"
-    output_path = "playground/test_workspace/test_output.pptx"
+    template_path = "playground/test_workspace/template/test_template.pptx"
+    output_path = "playground/test_workspace/output/test_output.pptx"
     
     try:
         print(f"\n🔍 开始填充PPT...")
