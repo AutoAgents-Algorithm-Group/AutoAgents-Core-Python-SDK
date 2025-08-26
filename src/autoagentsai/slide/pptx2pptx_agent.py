@@ -5,7 +5,7 @@ import csv
 import tempfile
 import requests
 import base64
-from typing import Optional, Any, Dict, Union
+from typing import Optional, Any, Dict, List, Union
 from io import BytesIO
 from pptx import Presentation
 from pptx.util import Pt
@@ -1067,11 +1067,46 @@ class PPTX2PPTXAgent:
     - 支持嵌套字典结构和点号分隔的路径访问
     - 支持数组索引访问 (如 page[0].title, user.hobbies[1])
     - 支持动态重排序：根据数据中的order信息重新排列幻灯片
-    - 支持多数据填充：同一模板页面可以用不同数据填入多次
     """
     
     def __init__(self):
         pass
+    
+    def _is_safe_shape(self, shape, verbose: bool = False):
+        """
+        安全检查形状是否可以处理，避免lxml错误
+        
+        Args:
+            shape: 要检查的形状对象
+            verbose: 是否输出详细信息
+            
+        Returns:
+            bool: True表示形状安全可处理，False表示应该跳过
+        """
+        try:
+            # 检查是否为组合形状
+            if hasattr(shape, 'shape_type'):
+                if shape.shape_type == 6:  # MSO_SHAPE_TYPE.GROUP
+                    if verbose:
+                        print(f"  跳过组合形状 (shape_type=6)")
+                    return False
+                # 可以在这里添加其他需要跳过的形状类型
+                # 比如某些特殊的形状类型也可能导致问题
+        except Exception as e:
+            if verbose:
+                print(f"  检查形状类型时出错，跳过该形状: {e}")
+            return False
+        
+        # 尝试访问基本属性来验证形状的有效性
+        try:
+            # 尝试访问一些基本属性
+            _ = hasattr(shape, 'has_text_frame')
+            _ = hasattr(shape, 'has_table')
+            return True
+        except Exception as e:
+            if verbose:
+                print(f"  形状属性访问异常，跳过该形状: {e}")
+            return False
     
     def _find_best_layout(self, presentation):
         """
@@ -1106,6 +1141,10 @@ class PPTX2PPTXAgent:
             
             # 复制源幻灯片的所有形状（包括占位符内容）
             for shape in source_slide.shapes:
+                # 安全检查形状
+                if not self._is_safe_shape(shape, verbose=False):
+                    continue
+                    
                 try:
                     # 复制形状的XML元素
                     from copy import deepcopy
@@ -1211,79 +1250,222 @@ class PPTX2PPTXAgent:
                 print(f"⚠️ 页面设置复制失败，使用默认设置: {str(e)}")
             pass
     
-    def _reorder_slides(self, filled_prs, order_info, verbose: bool = True):
+    def _render_slides_from_instructions(self, template_prs, render_instructions, data, verbose: bool = True):
         """
-        根据order信息重新排序已填充的演示文稿
+        根据渲染指令创建演示文稿
         
         Args:
-            filled_prs: 已填充的演示文稿
-            order_info: 包含mapping和order的字典
+            template_prs: 原始模板演示文稿
+            render_instructions: 渲染指令列表，格式为 [(template_index, data_path), ...]
+            data: 数据字典
             verbose: 是否显示详细信息
             
         Returns:
-            重新排序后的演示文稿
+            新创建的演示文稿
         """
-        if not order_info or 'order' not in order_info:
-            return filled_prs
+        if not render_instructions:
+            return template_prs
         
-        order = order_info['order']
-        mapping = order_info.get('mapping', {})
-        
-        if not order:
-            return filled_prs
-        
-        total_slides = len(filled_prs.slides)
+        total_template_slides = len(template_prs.slides)
         
         if verbose:
-            print(f"🎯 开始重排序幻灯片")
-            print(f"📊 原始幻灯片数量: {total_slides}")
-            print(f"🔢 重排序列: {[i+1 for i in order]} (共{len(order)}张)")
+            print(f"🎯 开始按渲染指令创建演示文稿")
+            print(f"📊 模板幻灯片数量: {total_template_slides}")
+            print(f"🔢 渲染指令数量: {len(render_instructions)}")
         
-        # 从mapping中提取所有定义的页面索引（如果有mapping的话）
-        valid_indices = set()
-        if mapping:
-            for slide_type, indices in mapping.items():
-                if isinstance(indices, list):
-                    valid_indices.update(indices)
-        
-        # 验证顺序列表中的索引
-        for idx in order:
-            # 首先检查是否超出文件范围
-            if idx < 0 or idx >= total_slides:
+        # 验证渲染指令中的模板索引
+        for i, (template_idx, data_path) in enumerate(render_instructions):
+            if template_idx < 0 or template_idx >= total_template_slides:
                 if verbose:
-                    print(f"❌ 无效的幻灯片索引: {idx+1} (文件只有 {total_slides} 张幻灯片)")
-                return filled_prs
-            
-            # 如果有mapping定义，检查是否在mapping定义的范围内
-            if valid_indices and idx not in valid_indices:
-                if verbose:
-                    mapped_pages = [i+1 for i in sorted(valid_indices)]
-                    print(f"❌ 幻灯片索引 {idx+1} 不在映射定义的范围内")
-                    print(f"   映射中定义的页面: {mapped_pages}")
-                return filled_prs
+                    print(f"❌ 无效的模板索引: {template_idx} (模板只有 {total_template_slides} 张幻灯片)")
+                return template_prs
         
         # 创建新的演示文稿
-        target_prs = Presentation()
-        self._copy_presentation_settings(filled_prs, target_prs, verbose)
+        result_prs = Presentation()
+        self._copy_presentation_settings(template_prs, result_prs, verbose)
         
         # 删除默认幻灯片
-        if len(target_prs.slides) > 0:
-            slide_id = target_prs.slides[0].slide_id
-            target_prs.part.drop_rel(target_prs.slides._sldIdLst[0].rId)
-            del target_prs.slides._sldIdLst[0]
+        if len(result_prs.slides) > 0:
+            slide_id = result_prs.slides[0].slide_id
+            result_prs.part.drop_rel(result_prs.slides._sldIdLst[0].rId)
+            del result_prs.slides._sldIdLst[0]
         
-        # 按新顺序复制幻灯片
-        for new_pos, old_index in enumerate(order):
-            source_slide = filled_prs.slides[old_index]
-            self._copy_slide(source_slide, target_prs)
+        # 按渲染指令复制和填充幻灯片
+        for new_pos, (template_idx, data_path) in enumerate(render_instructions):
+            # 复制模板幻灯片
+            template_slide = template_prs.slides[template_idx]
+            new_slide = self._copy_slide(template_slide, result_prs)
+            
+            # 获取该数据路径对应的数据
+            slide_data = get_value_by_key(data, data_path)
             
             if verbose:
-                print(f"📋 位置 {new_pos+1}: 复制幻灯片 {old_index+1}")
+                print(f"📋 位置 {new_pos+1}: 使用模板 {template_idx+1}, 数据路径: {data_path}")
+                if slide_data is not None:
+                    print(f"   数据获取成功: {type(slide_data).__name__}")
+                else:
+                    print(f"   ⚠️ 数据路径无效或数据为空")
+            
+            # 填充当前幻灯片的数据
+            self._fill_single_slide(new_slide, slide_data or {}, verbose)
         
         if verbose:
-            print(f"✅ 重排序完成! 输出 {len(order)} 张幻灯片")
+            print(f"✅ 渲染完成! 输出 {len(render_instructions)} 张幻灯片")
         
-        return target_prs
+        return result_prs
+    
+    def _fill_single_slide(self, slide, slide_data, verbose: bool = True):
+        """
+        填充单个幻灯片的数据
+        
+        Args:
+            slide: 幻灯片对象
+            slide_data: 该幻灯片的数据
+            verbose: 是否显示详细信息
+        """
+        # 如果slide_data不是字典，将其转换为字典格式
+        if not isinstance(slide_data, dict):
+            # 如果是简单值，创建一个通用的数据结构
+            processed_slide_data = {
+                "content": slide_data,
+                "title": str(slide_data) if slide_data is not None else "",
+                "description": str(slide_data) if slide_data is not None else ""
+            }
+        else:
+            processed_slide_data = slide_data
+        
+        # 处理远程图片下载（复用原有逻辑）
+        image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.svg')
+        
+        def process_value(value):
+            if isinstance(value, str):
+                if value.endswith('.csv') and os.path.exists(value):
+                    return convert_csv_to_json_list(value)
+                elif value.startswith(('http://', 'https://')):
+                    url_path = value.split('?')[0].lower()
+                    if url_path.endswith(image_extensions):
+                        local_image_path = download_image(value)
+                        if local_image_path:
+                            return local_image_path
+                return value
+            elif isinstance(value, list):
+                return [process_value(item) for item in value]
+            elif isinstance(value, dict):
+                return {k: process_value(v) for k, v in value.items()}
+            else:
+                return value
+        
+        # 处理数据中的远程资源
+        for key, value in processed_slide_data.items():
+            processed_value = process_value(value)
+            if processed_value is not None:
+                processed_slide_data[key] = processed_value
+        
+        # 表格填充
+        slide_table_requests = []
+        slide_tables = []
+        
+        for shape in slide.shapes:
+            # 安全检查形状
+            if not self._is_safe_shape(shape, verbose):
+                continue
+            
+            try:
+                if shape.has_text_frame:
+                    text = shape.text.strip()
+                    if text.startswith("{{#") and text.endswith("}}"):
+                        key = text[3:-2].strip()
+                        table_data = get_value_by_key(processed_slide_data, key)
+                        
+                        if isinstance(table_data, str) and table_data.endswith('.csv') and os.path.exists(table_data):
+                            table_data = convert_csv_to_json_list(table_data)
+                        
+                        if table_data is not None and isinstance(table_data, list):
+                            slide_table_requests.append((shape, key, table_data))
+                
+                if hasattr(shape, 'has_table') and shape.has_table:
+                    slide_tables.append(shape)
+            except Exception as e:
+                if verbose:
+                    print(f"  处理形状时出错，跳过该形状: {e}")
+                continue
+        
+        # 处理表格填充
+        self._fill_slide_tables(slide, slide_table_requests, slide_tables)
+        
+        # 文本和图片填充
+        for shape in list(slide.shapes):
+            # 安全检查形状
+            if not self._is_safe_shape(shape, verbose):
+                continue
+            
+            try:
+                if not shape.has_text_frame:
+                    continue
+            except Exception as e:
+                if verbose:
+                    print(f"  访问text_frame属性时出错，跳过该形状: {e}")
+                continue
+            
+            try:
+                text = shape.text.strip()
+            except Exception as e:
+                if verbose:
+                    print(f"  访问text属性时出错，跳过该形状: {e}")
+                continue
+            
+            if "{{" in text and "}}" in text:
+                pure_placeholder = is_pure_placeholder(text)
+                
+                if pure_placeholder:
+                    key = pure_placeholder
+                    content_type = "text"
+
+                    if key.startswith("@"):
+                        key = key[1:]
+                        content_type = "image"
+                    elif key.startswith("#"):
+                        continue
+
+                    value = get_value_by_key(processed_slide_data, key)
+                    if value is None:
+                        continue
+
+                    if content_type == "text":
+                        if isinstance(value, str) and any(marker in value for marker in ['*', '#', '`', '\n']):
+                            parse_markdown_text_preserve_format(shape.text_frame, value)
+                        elif isinstance(value, list):
+                            process_list_preserve_format(shape.text_frame, value)
+                        else:
+                            replace_text_preserve_format(shape.text_frame, str(value))
+
+                    elif content_type == "image":
+                        left, top, width, height = shape.left, shape.top, shape.width, shape.height
+                        slide.shapes._spTree.remove(shape._element)
+                            
+                        if os.path.exists(value):
+                            slide.shapes.add_picture(value, left, top, width=width, height=height)
+                            if verbose:
+                                print(f"✅ 成功替换图片: {key}")
+                        elif value.startswith(('http://', 'https://')):
+                            if verbose:
+                                print(f"❌ 图片处理失败：远程图片下载失败 - {key}")
+                            text_box = slide.shapes.add_textbox(left, top, width, height)
+                            text_frame = text_box.text_frame
+                            text_frame.text = f"图片加载失败: {key}"
+                        else:
+                            if verbose:
+                                print(f"⚠️ 警告: 图片文件不存在: {value}")
+                            text_box = slide.shapes.add_textbox(left, top, width, height)
+                            text_frame = text_box.text_frame
+                            text_frame.text = f"图片不存在: {key}"
+                
+                else:
+                    # 混合文本模式
+                    replaced_text = replace_mixed_placeholders(text, processed_slide_data)
+                    replace_text_preserve_format(shape.text_frame, replaced_text)
+    
+
 
     def _fill_slide_tables(self, slide, table_requests, slide_tables):
         """
@@ -1335,7 +1517,7 @@ class PPTX2PPTXAgent:
              personal_auth_key: Optional[str] = None,
              personal_auth_secret: Optional[str] = None,
              base_url: str = "https://uat.agentspro.cn",
-             order_info: Optional[dict] = None,
+             order_info: Optional[List[tuple]] = None,
              verbose: bool = True) -> Union[str, Dict]:
         """
         使用嵌套JSON数据结构填充PowerPoint模板，支持动态重排序
@@ -1351,9 +1533,9 @@ class PPTX2PPTXAgent:
             personal_auth_key: 个人认证密钥（当output_format为"url"时需要）
             personal_auth_secret: 个人认证密钥（当output_format为"url"时需要）
             base_url: 上传服务的基础URL
-            order_info: 重排序信息字典，可选参数，包含：
-                - order: 幻灯片索引列表（从0开始，支持重复），如 [0, 1, 1, 2]
-                - mapping: 幻灯片映射字典（可选），如 {'cover': [0], 'content': [1,2,3]}
+            order_info: 渲染指令列表，格式为 [(template_index, data_path), ...]
+                每个元组包含：(模板索引, 数据路径)
+                例如：[(0, "report_cover"), (1, "achievements[0]"), (1, "achievements[1]")]
             verbose: 是否显示详细输出信息
             
         Returns:
@@ -1362,33 +1544,25 @@ class PPTX2PPTXAgent:
             
         Example:
             data = {
-                "title": "我的演示文稿",
-                "user": {
-                    "nickname": "frank",
-                    "age": 21,
-                    "hobbies": ["读书", "运动", "音乐"],
-                    "dad": {
-                        "nickname": "frank-dad",
-                        "age": 45
-                    }
-                },
-                "company": {
-                    "logo": "/path/to/logo.png",
-                    "products": [
-                        {"name": "产品A", "price": 100},
-                        {"name": "产品B", "price": 200}
-                    ]
-                }
+                "report_cover": {"title": "年度总结报告", "author": "战略发展部"},
+                "achievements": [
+                    {"id": "A1", "desc": "完成了A轮融资，金额超预期。"},
+                    {"id": "A2", "desc": "核心产品用户数突破100万大关。"}
+                ],
+                "challenges": [
+                    {"id": "C1", "desc": "市场竞争加剧，需要寻找新的突破口。"}
+                ],
+                "plan_next_year": {"focus": "重点投入AI驱动的新产品线研发。"}
             }
             
-            # 重排序配置（可选）
-            order_info = {
-                "order": [0, 2, 1, 2],  # 重排序：第1页，第3页，第2页，再次第3页
-                "mapping": {            # 可选的映射配置
-                    "cover": [0],
-                    "content": [1, 2, 3]
-                }
-            }
+            # 渲染指令
+            render_instructions = [
+                (0, "report_cover"),      # 模板0, 封面
+                (1, "achievements[0]"),   # 模板1, 成就页
+                (1, "achievements[1]"),   # 模板1, 成就页  
+                (2, "challenges[0]"),     # 模板2, 挑战页
+                (3, "plan_next_year"),    # 模板3, 计划页
+            ]
             
             模板中的占位符：
             - {{title}} -> "我的演示文稿"
@@ -1402,11 +1576,12 @@ class PPTX2PPTXAgent:
             
             调用示例：
             agent = PPTX2PPTXAgent()
+            
             result = agent.fill(
                 data=data,
                 template_file_path="template.pptx",
                 output_file_path="output.pptx",
-                order_info=order_info  # 启用重排序功能
+                order_info=render_instructions
             )
         """
         
@@ -1500,133 +1675,171 @@ class PPTX2PPTXAgent:
             if processed_value is not None:
                 processed_data[key] = processed_value
 
-        # 1. 表格填充 - 按页面分组处理，避免跨页面匹配
-        if verbose:
-            print(f"开始扫描PPT模板中的占位符...")
-        
-        for slide_idx, slide in enumerate(prs.slides):
+        # 如果没有渲染指令，使用传统的全量填充模式
+        if not order_info:
+            # 1. 表格填充 - 按页面分组处理，避免跨页面匹配
             if verbose:
-                print(f"扫描第 {slide_idx + 1} 页...")
+                print(f"开始扫描PPT模板中的占位符...")
             
-            # 收集当前页面的表格占位符和表格
-            slide_table_requests = []  # 当前页面的表格占位符
-            slide_tables = []  # 当前页面的表格
-            
-            for shape in slide.shapes:
-                # 收集表格占位符
-                if shape.has_text_frame:
-                    text = shape.text.strip()
-                    if text.startswith("{{") and text.endswith("}}"):
-                        if verbose:
-                            print(f"  找到占位符: {text}")
-                    if text.startswith("{{#") and text.endswith("}}"):
-                        key = text[3:-2].strip()  # 去掉 {{# 和 }}
-                        if verbose:
-                            print(f"找到表格占位符: {{#{key}}}")
-                        table_data = get_value_by_key(processed_data, key)
-                        
-                        # 如果表格数据是字符串，可能是CSV文件路径，需要处理
-                        if isinstance(table_data, str):
-                            if table_data.endswith('.csv') and os.path.exists(table_data):
-                                print(f"检测到CSV文件: {table_data}")
-                                table_data = convert_csv_to_json_list(table_data)
-                            else:
-                                print(f"表格数据为字符串但不是有效的CSV文件: {table_data}")
-                                table_data = None
-                        
-                        if table_data is not None and isinstance(table_data, list):
-                            print(f"表格占位符 {{#{key}}} 数据解析成功，{len(table_data)} 条记录")
-                            slide_table_requests.append((shape, key, table_data))
-                        else:
-                            print(f"表格占位符 {{#{key}}} 数据解析失败或格式不正确")
+            for slide_idx, slide in enumerate(prs.slides):
+                if verbose:
+                    print(f"扫描第 {slide_idx + 1} 页...")
                 
-                # 收集当前页面的表格
-                if shape.has_table:
-                    slide_tables.append(shape)
-            
-            # 处理当前页面的表格填充
-            self._fill_slide_tables(slide, slide_table_requests, slide_tables)
-        
-        # 2. 文本、图片填充
-        for slide in prs.slides:
-            for shape in list(slide.shapes):  # list() to allow removal
-                if not shape.has_text_frame:
-                    continue
-            
-                text = shape.text.strip()
+                # 收集当前页面的表格占位符和表格
+                slide_table_requests = []  # 当前页面的表格占位符
+                slide_tables = []  # 当前页面的表格
                 
-                # 检查是否包含占位符
-                if "{{" in text and "}}" in text:
-                    # 检查是否为纯占位符
-                    pure_placeholder = is_pure_placeholder(text)
+                for shape in slide.shapes:
+                    # 安全检查形状
+                    if not self._is_safe_shape(shape, verbose):
+                        continue
                     
-                    if pure_placeholder:
-                        # 纯占位符模式（原有逻辑）
-                        key = pure_placeholder
-                        content_type = "text"
-
-                        # 判断类型前缀
-                        if key.startswith("@"):
-                            key = key[1:]
-                            content_type = "image"
-                        elif key.startswith("#"):
-                            # 表格已经在上面处理过了，跳过
-                            continue
-
-                        value = get_value_by_key(processed_data, key)
-                        if value is None:
-                            continue
-
-                        if content_type == "text":
-                            # 检查是否包含Markdown格式
-                            if isinstance(value, str) and any(marker in value for marker in ['*', '#', '`', '\n']):
-                                # 使用Markdown解析，现在会保留格式
-                                parse_markdown_text_preserve_format(shape.text_frame, value)
-                            elif isinstance(value, list):
-                                # 处理列表数据，每项作为bullet point，完全保留格式
-                                process_list_preserve_format(shape.text_frame, value)
-                            else:
-                                # 普通文本 - 使用新的格式保留函数
-                                replace_text_preserve_format(shape.text_frame, str(value))
-
-                        elif content_type == "image":
-                            # 获取位置并删除原文本框
-                            left, top, width, height = shape.left, shape.top, shape.width, shape.height
-                            slide.shapes._spTree.remove(shape._element)
+                    try:
+                        # 收集表格占位符
+                        if shape.has_text_frame:
+                            text = shape.text.strip()
+                            if text.startswith("{{") and text.endswith("}}"):
+                                if verbose:
+                                    print(f"  找到占位符: {text}")
+                            if text.startswith("{{#") and text.endswith("}}"):
+                                key = text[3:-2].strip()  # 去掉 {{# 和 }}
+                                if verbose:
+                                    print(f"找到表格占位符: {{#{key}}}")
+                                table_data = get_value_by_key(processed_data, key)
                                 
-                            # 检查是否为本地文件路径或URL
-                            if os.path.exists(value):
-                                # 本地文件路径
-                                slide.shapes.add_picture(value, left, top, width=width, height=height)
-                                print(f"✅ 成功替换图片 (本地文件): {key}")
-                            elif value.startswith(('http://', 'https://')):
-                                # URL路径（下载失败的情况）
-                                print(f"❌ 图片占位符 {{@{key}}} 处理失败：远程图片下载失败")
-                                print(f"   原始URL: {value}")
-                                # 可以选择添加一个错误提示文本框
-                                text_box = slide.shapes.add_textbox(left, top, width, height)
-                                text_frame = text_box.text_frame
-                                text_frame.text = f"图片加载失败: {key}"
-                            else:
-                                # 其他情况
-                                print(f"⚠️ 警告: 图片文件不存在: {value}")
-                                # 添加错误提示文本框
-                                text_box = slide.shapes.add_textbox(left, top, width, height)
-                                text_frame = text_box.text_frame
-                                text_frame.text = f"图片不存在: {key}"
-                    
-                    else:
-                        # 混合文本模式（新功能）- 完全保留格式
-                        replaced_text = replace_mixed_placeholders(text, processed_data)
-                        replace_text_preserve_format(shape.text_frame, replaced_text)
+                                # 如果表格数据是字符串，可能是CSV文件路径，需要处理
+                                if isinstance(table_data, str):
+                                    if table_data.endswith('.csv') and os.path.exists(table_data):
+                                        print(f"检测到CSV文件: {table_data}")
+                                        table_data = convert_csv_to_json_list(table_data)
+                                    else:
+                                        print(f"表格数据为字符串但不是有效的CSV文件: {table_data}")
+                                        table_data = None
+                                
+                                if table_data is not None and isinstance(table_data, list):
+                                    print(f"表格占位符 {{#{key}}} 数据解析成功，{len(table_data)} 条记录")
+                                    slide_table_requests.append((shape, key, table_data))
+                                else:
+                                    print(f"表格占位符 {{#{key}}} 数据解析失败或格式不正确")
+                        
+                        # 收集当前页面的表格
+                        if hasattr(shape, 'has_table') and shape.has_table:
+                            slide_tables.append(shape)
+                    except Exception as e:
                         if verbose:
-                            print(f"混合文本替换: '{text}' -> '{replaced_text}'")
+                            print(f"  处理形状时出错，跳过该形状: {e}")
+                        continue
+                
+                # 处理当前页面的表格填充
+                self._fill_slide_tables(slide, slide_table_requests, slide_tables)
+            
+            # 2. 文本、图片填充
+            for slide in prs.slides:
+                for shape in list(slide.shapes):  # list() to allow removal
+                    # 安全检查形状
+                    if not self._is_safe_shape(shape, verbose):
+                        continue
+                    
+                    try:
+                        if not shape.has_text_frame:
+                            continue
+                    except Exception as e:
+                        if verbose:
+                            print(f"  访问text_frame属性时出错，跳过该形状: {e}")
+                        continue
+                    
+                    try:
+                        text = shape.text.strip()
+                    except Exception as e:
+                        if verbose:
+                            print(f"  访问text属性时出错，跳过该形状: {e}")
+                        continue
+                    
+                    # 检查是否包含占位符
+                    if "{{" in text and "}}" in text:
+                        # 检查是否为纯占位符
+                        pure_placeholder = is_pure_placeholder(text)
+                        
+                        if pure_placeholder:
+                            # 纯占位符模式（原有逻辑）
+                            key = pure_placeholder
+                            content_type = "text"
 
-        # 3. 重排序处理（如果提供了order_info）
-        if order_info:
+                            # 判断类型前缀
+                            if key.startswith("@"):
+                                key = key[1:]
+                                content_type = "image"
+                            elif key.startswith("#"):
+                                # 表格已经在上面处理过了，跳过
+                                continue
+
+                            value = get_value_by_key(processed_data, key)
+                            if value is None:
+                                continue
+
+                            if content_type == "text":
+                                # 检查是否包含Markdown格式
+                                if isinstance(value, str) and any(marker in value for marker in ['*', '#', '`', '\n']):
+                                    # 使用Markdown解析，现在会保留格式
+                                    parse_markdown_text_preserve_format(shape.text_frame, value)
+                                elif isinstance(value, list):
+                                    # 处理列表数据，每项作为bullet point，完全保留格式
+                                    process_list_preserve_format(shape.text_frame, value)
+                                else:
+                                    # 普通文本 - 使用新的格式保留函数
+                                    replace_text_preserve_format(shape.text_frame, str(value))
+
+                            elif content_type == "image":
+                                # 获取位置并删除原文本框
+                                left, top, width, height = shape.left, shape.top, shape.width, shape.height
+                                slide.shapes._spTree.remove(shape._element)
+                                    
+                                # 检查是否为本地文件路径或URL
+                                if os.path.exists(value):
+                                    # 本地文件路径
+                                    slide.shapes.add_picture(value, left, top, width=width, height=height)
+                                    print(f"✅ 成功替换图片 (本地文件): {key}")
+                                elif value.startswith(('http://', 'https://')):
+                                    # URL路径（下载失败的情况）
+                                    print(f"❌ 图片占位符 {{@{key}}} 处理失败：远程图片下载失败")
+                                    print(f"   原始URL: {value}")
+                                    # 可以选择添加一个错误提示文本框
+                                    text_box = slide.shapes.add_textbox(left, top, width, height)
+                                    text_frame = text_box.text_frame
+                                    text_frame.text = f"图片加载失败: {key}"
+                                else:
+                                    # 其他情况
+                                    print(f"⚠️ 警告: 图片文件不存在: {value}")
+                                    # 添加错误提示文本框
+                                    text_box = slide.shapes.add_textbox(left, top, width, height)
+                                    text_frame = text_box.text_frame
+                                    text_frame.text = f"图片不存在: {key}"
+                        
+                        else:
+                            # 混合文本模式（新功能）- 完全保留格式
+                            replaced_text = replace_mixed_placeholders(text, processed_data)
+                            replace_text_preserve_format(shape.text_frame, replaced_text)
+                            if verbose:
+                                print(f"混合文本替换: '{text}' -> '{replaced_text}'")
+
+        # 3. 渲染指令处理（如果提供了order_info）
+        else:
             if verbose:
-                print(f"\n🔄 检测到重排序配置，开始重排序...")
-            prs = self._reorder_slides(prs, order_info, verbose)
+                print(f"\n🔄 检测到渲染指令，开始处理...")
+            
+            # 验证渲染指令格式
+            if not isinstance(order_info, list):
+                raise ValueError(f"渲染指令必须是列表格式，当前类型: {type(order_info)}")
+            
+            for i, item in enumerate(order_info):
+                if not isinstance(item, tuple) or len(item) != 2:
+                    raise ValueError(f"渲染指令第{i}项格式错误，必须是(模板索引, 数据路径)的元组格式")
+            
+            if verbose:
+                print(f"✅ 渲染指令格式验证通过")
+            
+            # 使用渲染指令从模板生成演示文稿
+            prs = self._render_slides_from_instructions(prs, order_info, processed_data, verbose)
 
         # 根据输出格式处理结果
         result = None
@@ -1696,364 +1909,3 @@ class PPTX2PPTXAgent:
                         print(f"清理临时文件失败: {temp_file}, 错误: {e}")
         
         return result
-    
-    def fill_multiple_data(self, 
-                           data_list: list, 
-                           template_file_path: str, 
-                           template_slide_index: int = 0,
-                           output_file_path: Optional[str] = None,
-                           output_format: str = "local",
-                           personal_auth_key: Optional[str] = None,
-                           personal_auth_secret: Optional[str] = None,
-                           base_url: str = "https://uat.agentspro.cn",
-                           verbose: bool = True) -> Union[str, Dict]:
-        """
-        使用多个数据项填充同一个模板页面，生成多页内容
-        
-        这个方法专门解决"使用同一个模板页面，但填入不同内容"的需求。
-        它会：
-        1. 选择指定的模板页面作为基础模板
-        2. 为每个数据项创建该页面的副本
-        3. 用不同的数据填充每个副本
-        4. 生成包含所有填充页面的新演示文稿
-        
-        Args:
-            data_list: 数据列表，每个元素对应一页的填充数据
-                例如: [
-                    {"name": "张三", "score": 95, "photo": "path1.jpg"},
-                    {"name": "李四", "score": 88, "photo": "path2.jpg"},
-                    {"name": "王五", "score": 92, "photo": "path3.jpg"}
-                ]
-            template_file_path: 模板文件路径（支持本地路径和URL）
-            template_slide_index: 要用作模板的页面索引（从0开始），默认为第一页
-            output_file_path: 输出文件路径（当output_format为"local"时必需）
-            output_format: 输出格式，支持 "local"、"base64"、"url"
-            personal_auth_key: 个人认证密钥（当output_format为"url"时需要）
-            personal_auth_secret: 个人认证密钥（当output_format为"url"时需要）
-            base_url: 上传服务的基础URL
-            verbose: 是否显示详细输出信息
-            
-        Returns:
-            str: 当output_format为"local"时返回文件路径，为"base64"时返回base64字符串
-            Dict: 当output_format为"url"时返回上传结果字典
-            
-        Example:
-            # 学生成绩单场景
-            students_data = [
-                {
-                    "name": "张三",
-                    "score": 95,
-                    "grade": "A",
-                    "photo": "zhang_photo.jpg",
-                    "subjects": [
-                        {"name": "数学", "score": 98},
-                        {"name": "语文", "score": 92}
-                    ]
-                },
-                {
-                    "name": "李四", 
-                    "score": 88,
-                    "grade": "B",
-                    "photo": "li_photo.jpg",
-                    "subjects": [
-                        {"name": "数学", "score": 85},
-                        {"name": "语文", "score": 91}
-                    ]
-                }
-            ]
-            
-            agent = PPTX2PPTXAgent()
-            result = agent.fill_multiple_data(
-                data_list=students_data,
-                template_file_path="student_template.pptx",
-                template_slide_index=0,  # 使用第一页作为模板
-                output_file_path="students_report.pptx"
-            )
-            
-            # 模板页面中的占位符：
-            # {{name}} -> 学生姓名
-            # {{score}} -> 总分
-            # {{grade}} -> 等级
-            # {{@photo}} -> 学生照片
-            # {{#subjects}} -> 科目成绩表格
-        """
-        
-        # 参数验证
-        if not data_list:
-            raise ValueError("data_list不能为空")
-            
-        if not isinstance(data_list, list):
-            raise ValueError("data_list必须是列表类型")
-            
-        if output_format not in ["local", "base64", "url"]:
-            raise ValueError(f"不支持的输出格式: {output_format}，支持的格式: local, base64, url")
-        
-        if output_format == "local" and not output_file_path:
-            raise ValueError("当output_format为'local'时，必须提供output_file_path参数")
-            
-        if output_format == "url" and not personal_auth_key and not personal_auth_secret:
-            raise ValueError("当output_format为'url'时，必须提供认证参数")
-        
-        if verbose:
-            print(f"🚀 开始多数据填充")
-            print(f"📊 数据项数量: {len(data_list)}")
-            print(f"📋 模板页面索引: {template_slide_index + 1}")
-        
-        # 用于存储需要清理的临时文件
-        temp_files = []
-        
-        try:
-            # 检查模板路径是否为URL，如果是则下载到临时文件
-            actual_template_path = template_file_path
-            
-            if template_file_path.startswith(('http://', 'https://')):
-                if verbose:
-                    print(f"检测到URL模板: {template_file_path}")
-                downloaded_template = download_template(template_file_path)
-                if downloaded_template:
-                    actual_template_path = downloaded_template
-                    temp_files.append(downloaded_template)
-                    if verbose:
-                        print(f"模板下载成功: {downloaded_template}")
-                else:
-                    raise ValueError(f"无法下载模板文件: {template_file_path}")
-            
-            # 加载模板
-            template_prs = Presentation(actual_template_path)
-            
-            # 验证模板页面索引
-            if template_slide_index < 0 or template_slide_index >= len(template_prs.slides):
-                raise ValueError(f"模板页面索引无效: {template_slide_index}，模板总页数: {len(template_prs.slides)}")
-            
-            # 创建新的演示文稿
-            output_prs = Presentation()
-            self._copy_presentation_settings(template_prs, output_prs, verbose)
-            
-            # 删除默认幻灯片
-            if len(output_prs.slides) > 0:
-                slide_id = output_prs.slides[0].slide_id
-                output_prs.part.drop_rel(output_prs.slides._sldIdLst[0].rId)
-                del output_prs.slides._sldIdLst[0]
-            
-            # 获取模板页面
-            template_slide = template_prs.slides[template_slide_index]
-            
-            if verbose:
-                print(f"📄 使用模板页面 {template_slide_index + 1} 作为基础")
-            
-            # 为每个数据项创建页面
-            for i, data_item in enumerate(data_list):
-                if verbose:
-                    print(f"📝 处理数据项 {i + 1}/{len(data_list)}")
-                
-                # 复制模板页面到新演示文稿
-                self._copy_slide(template_slide, output_prs)
-                
-                # 获取刚复制的页面
-                new_slide = output_prs.slides[-1]
-                
-                # 标准化数据格式
-                normalized_data = normalize_data_format(data_item)
-                
-                # 处理远程图片下载和数据预处理
-                processed_data = self._process_data_for_slide(normalized_data, temp_files, verbose)
-                
-                # 填充页面内容
-                self._fill_single_slide(new_slide, processed_data, verbose)
-                
-                if verbose:
-                    print(f"✅ 数据项 {i + 1} 填充完成")
-            
-            if verbose:
-                print(f"🎯 多数据填充完成，生成 {len(data_list)} 页内容")
-            
-            # 保存结果
-            result = self._save_presentation(output_prs, output_format, output_file_path, 
-                                           personal_auth_key, personal_auth_secret, base_url, verbose)
-            
-            return result
-            
-        finally:
-            # 清理临时文件
-            for temp_file in temp_files:
-                try:
-                    cleanup_temp_file(temp_file)
-                    if verbose:
-                        print(f"清理临时文件: {temp_file}")
-                except Exception as e:
-                    if verbose:
-                        print(f"清理临时文件失败: {temp_file}, 错误: {e}")
-    
-    def _process_data_for_slide(self, data: dict, temp_files: list, verbose: bool = True) -> dict:
-        """处理单个页面的数据，包括远程图片下载等"""
-        processed_data = {}
-        image_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.svg')
-        
-        def process_value(value):
-            """递归处理数据值"""
-            if isinstance(value, str):
-                # 检查是否是CSV文件路径
-                if value.endswith('.csv') and os.path.exists(value):
-                    if verbose:
-                        print(f"检测到CSV文件: {value}")
-                    return convert_csv_to_json_list(value)
-                # 检查是否是远程图片URL
-                elif value.startswith(('http://', 'https://')):
-                    url_path = value.split('?')[0].lower()
-                    is_image_by_extension = url_path.endswith(image_extensions)
-                    
-                    if is_image_by_extension or 'image' in value.lower():
-                        if verbose:
-                            print(f"检测到图片URL: {value}")
-                        local_image_path = download_image(value)
-                        if local_image_path:
-                            temp_files.append(local_image_path)
-                            if verbose:
-                                print(f"成功下载图片: {value} -> {local_image_path}")
-                            return local_image_path
-                        else:
-                            if verbose:
-                                print(f"⚠️ 图片下载失败，保留原始URL: {value}")
-                            return value
-                    else:
-                        return value
-                else:
-                    return value
-            elif isinstance(value, list):
-                return [process_value(item) for item in value]
-            elif isinstance(value, dict):
-                return {k: process_value(v) for k, v in value.items()}
-            else:
-                return value
-
-        for key, value in data.items():
-            processed_value = process_value(value)
-            if processed_value is not None:
-                processed_data[key] = processed_value
-                
-        return processed_data
-    
-    def _fill_single_slide(self, slide, data: dict, verbose: bool = True):
-        """填充单个页面的内容"""
-        # 收集当前页面的所有表格
-        slide_tables = []
-        for shape in slide.shapes:
-            if shape.has_table:
-                slide_tables.append(shape)
-        
-        # 收集表格填充请求
-        table_requests = []
-        
-        # 遍历所有形状，处理文本和图片占位符
-        shapes_to_remove = []
-        
-        for shape in slide.shapes:
-            if hasattr(shape, 'text_frame') and shape.text_frame:
-                original_text = shape.text_frame.text
-                
-                # 检查是否包含占位符
-                if '{{' in original_text and '}}' in original_text:
-                    # 表格占位符检查
-                    table_matches = re.findall(r'\{\{#(\w+(?:\.\w+)*(?:\[\d+\])*)\}\}', original_text)
-                    if table_matches:
-                        for match in table_matches:
-                            table_data = get_nested_value(data, match)
-                            if table_data:
-                                table_requests.append((shape, match, table_data))
-                        continue
-                    
-                    # 图片占位符处理
-                    img_matches = re.findall(r'\{\{@(\w+(?:\.\w+)*(?:\[\d+\])*)\}\}', original_text)
-                    if img_matches:
-                        for match in img_matches:
-                            img_path = get_nested_value(data, match)
-                            if img_path and os.path.exists(str(img_path)):
-                                try:
-                                    replace_shape_with_image(shape, str(img_path))
-                                    if verbose:
-                                        print(f"图片占位符 '{{@{match}}}' 替换成功: {img_path}")
-                                except Exception as e:
-                                    if verbose:
-                                        print(f"图片占位符 '{{@{match}}}' 替换失败: {e}")
-                            else:
-                                if verbose:
-                                    print(f"警告: 图片占位符 '{{@{match}}}' 对应的文件不存在: {img_path}")
-                        continue
-                    
-                    # 文本占位符处理
-                    new_text = original_text
-                    text_matches = re.findall(r'\{\{(\w+(?:\.\w+)*(?:\[\d+\])*)\}\}', original_text)
-                    for match in text_matches:
-                        value = get_nested_value(data, match)
-                        if value is not None:
-                            if isinstance(value, list):
-                                # 处理列表数据
-                                if any(isinstance(item, dict) for item in value):
-                                    # 复杂列表，使用项目符号格式
-                                    formatted_value = format_complex_list(value)
-                                else:
-                                    # 简单列表
-                                    formatted_value = '\n'.join([f"• {str(item)}" for item in value])
-                                new_text = new_text.replace(f"{{{{{match}}}}}", formatted_value)
-                            else:
-                                new_text = new_text.replace(f"{{{{{match}}}}}", str(value))
-                    
-                    # 应用新文本并保留格式
-                    if new_text != original_text:
-                        if any(marker in new_text for marker in ['*', '#', '`']):
-                            parse_markdown_text_preserve_format(shape.text_frame, new_text)
-                        else:
-                            replace_text_preserve_format(shape.text_frame, new_text)
-        
-        # 处理表格填充
-        if table_requests:
-            self._fill_slide_tables(slide, table_requests, slide_tables)
-    
-    def _save_presentation(self, prs, output_format: str, output_file_path: Optional[str],
-                          personal_auth_key: Optional[str], personal_auth_secret: Optional[str],
-                          base_url: str, verbose: bool = True):
-        """保存演示文稿到指定格式"""
-        if output_format == "local":
-            # 确保输出目录存在
-            output_dir = os.path.dirname(output_file_path)
-            if output_dir and not os.path.exists(output_dir):
-                os.makedirs(output_dir)
-            
-            prs.save(output_file_path)
-            if verbose:
-                print(f"📁 文件保存成功: {output_file_path}")
-            return output_file_path
-            
-        elif output_format == "base64":
-            # 保存到临时文件并转换为base64
-            with tempfile.NamedTemporaryFile(suffix='.pptx', delete=False) as temp_file:
-                temp_path = temp_file.name
-                prs.save(temp_path)
-                
-                with open(temp_path, 'rb') as f:
-                    base64_content = base64.b64encode(f.read()).decode('utf-8')
-                
-                os.unlink(temp_path)  # 删除临时文件
-                if verbose:
-                    print(f"📊 Base64转换完成，长度: {len(base64_content)} 字符")
-                return base64_content
-                
-        elif output_format == "url":
-            # 上传到服务器
-            with tempfile.NamedTemporaryFile(suffix='.pptx', delete=False) as temp_file:
-                temp_path = temp_file.name
-                prs.save(temp_path)
-                
-                uploader = SimpleFileUploader(
-                    personal_auth_key=personal_auth_key,
-                    personal_auth_secret=personal_auth_secret,
-                    base_url=base_url
-                )
-                
-                with open(temp_path, 'rb') as f:
-                    result = uploader.upload(f, "generated_presentation.pptx")
-                
-                os.unlink(temp_path)  # 删除临时文件
-                if verbose:
-                    print(f"☁️ 文件上传成功: {result}")
-                return result
