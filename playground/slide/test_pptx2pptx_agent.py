@@ -51,6 +51,9 @@ def main():
         (0, "cover"),      # 模板0, 封面
         (1, "achievements[0]"),   # 模板1, 成就页
         (1, "achievements[1]"),   # 模板1, 成就页
+        (1, "achievements[1]"),   # 模板1, 成就页
+        (1, "achievements[1]"),   # 模板1, 成就页
+        (1, "achievements[1]"),   # 模板1, 成就页
         (2, "challenges[0]"),     # 模板2, 挑战页
         (3, "future"),    # 模板3, 计划页
     ]
@@ -68,7 +71,7 @@ def main():
         # 不使用order_info
         result = agent.fill(
             data=source_data,
-            template_file_path="playground/slide/input/test_template_wo_order_info.pptx",
+            template_file_path="playground/slide/input/test.pptx",
             output_file_path="playground/slide/output/test_pptx2pptx_wo_order_info.pptx",
             # order_info=order_info,
             verbose=True
