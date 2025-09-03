@@ -40,20 +40,10 @@ def main():
             "quotePrompt": """
                请扮演文本分类器，根据信息输入和聊天上下文，判断输入信息属于哪种分类，以JSON格式输出分类信息。
             """,
-            "labels": [
-              {
-                "value": "买菜",
-                "key": label1
-              },
-              {
-                "value": "买肉",
-                "key": label2
-              }
-            ]
-            # "labels": {
-            #     label1: "买菜",
-            #     label2: "买肉"
-            # }
+            "labels": {
+                label1: "买菜",
+                label2: "买肉"
+            }
         },
         outputs={
             label1:[

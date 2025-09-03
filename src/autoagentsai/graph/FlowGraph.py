@@ -86,11 +86,15 @@ class FlowGraph:
     def add_node(self, node_id, module_type, position, inputs=None, outputs=None):
         tpl = deepcopy(NODE_TEMPLATES.get(module_type))
 
-
         if module_type == "addMemoryVariable":
             final_inputs = process_add_memory_variable(tpl.get("inputs", [])[0],inputs)
             final_outputs = []
         else:
+            # 对于infoClass类型，预处理labels字段
+            if module_type == "infoClass" and inputs and "labels" in inputs:
+                inputs = deepcopy(inputs)  # 避免修改原始输入
+                inputs["labels"] = self._convert_labels_dict_to_list(inputs["labels"])
+            
             # 转换简洁格式为展开格式
             converted_inputs = convert_json_to_json_list(inputs)
             converted_outputs = convert_json_to_json_list(outputs)
@@ -215,6 +219,25 @@ class FlowGraph:
                 if value == source_handle:
                     return output.get("key")
         return None
+    
+    def _convert_labels_dict_to_list(self, labels):
+        """
+        将labels字典格式转换为数组格式
+        
+        Args:
+            labels: 字典格式的labels，如 {key1: "value1", key2: "value2"}
+            
+        Returns:
+            数组格式的labels，如 [{"key": key1, "value": "value1"}, {"key": key2, "value": "value2"}]
+        """
+        if isinstance(labels, dict):
+            return [{"key": key, "value": value} for key, value in labels.items()]
+        elif isinstance(labels, list):
+            # 如果已经是数组格式，直接返回
+            return labels
+        else:
+            # 其他情况返回空数组
+            return []
 
     def compile(self,
                 name: str = "未命名智能体", # 智能体名称
