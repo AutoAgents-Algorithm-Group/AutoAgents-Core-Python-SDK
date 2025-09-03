@@ -681,6 +681,117 @@ NODE_TEMPLATES = {
         ],
         "category": "高阶能力",
         "moduleType": "addMemoryVariable"
+      },
+    "infoClass":{
+        "name": "信息分类",
+        "intro": "根据提示词完成信息分类，且不同的信息类型配置不同的回复方式和内容。",
+        "category": "大模型",
+        "disabled": False,
+        "moduleType": "infoClass",
+        "inputs": [
+          {
+            "key": "switch",
+            "type": "target",
+            "label": "联动激活",
+            "value": False,
+            "keyType": "trigger",
+            "connected": True,
+            "valueType": "boolean",
+            "description": "同时满足上游所有条件方可激活当前组件执行逻辑"
+          },
+          {
+            "key": "switchAny",
+            "type": "target",
+            "label": "任一激活",
+            "value": False,
+            "keyType": "triggerAny",
+            "connected": True,
+            "valueType": "boolean",
+            "description": "同时满足上游任一条件即可激活当前组件执行逻辑"
+          },
+          {
+            "key": "text",
+            "type": "target",
+            "label": "信息输入",
+            "value": "",
+            "connected": True,
+            "valueType": "string",
+            "description": "引用变量：{{text}}"
+          },
+          {
+            "key": "knSearch",
+            "type": "target",
+            "label": "知识库搜索结果",
+            "value": "",
+            "connected": True,
+            "valueType": "search",
+            "description": "引用变量：{{knSearch}}"
+          },
+          {
+            "key": "knConfig",
+            "type": "target",
+            "label": "知识库高级配置",
+            "value": "## Role:知识问答专家\n        ## Goals:\n        - 根据知识库检索到的知识，结合聊天上下文信息，回答用户提问\n        ## Constrains：\n        - 严格根据知识库内容回答问题\n        - 知识库检索知识无法满足问题回答时，需严谨的回答问题\n        ## Rules\n        - 知识库检索知识中， instruction 是相关知识内容或问答对的问题,answer是预期回答。\n        ## 参考内容：\n        ### 知识库检索知识：\n        \"\"\"\n        {{quote}}\n        \"\"\"\n        ## 用户提问：\n        \"{{question}}\"\n",
+            "connected": False,
+            "valueType": "text",
+            "description": "知识库高级配置"
+          },
+          {
+            "key": "historyText",
+            "max": 6,
+            "min": 0,
+            "step": 1,
+            "type": "inputNumber",
+            "label": "聊天上下文",
+            "value": 3,
+            "connected": False,
+            "valueType": "chatHistory",
+            "description": ""
+          },
+          {
+            "key": "model",
+            "type": "selectChatModel",
+            "label": "选择模型",
+            "value": "",
+            "required": True,
+            "valueType": "string",
+            "description": ""
+          },
+          {
+            "key": "quotePrompt",
+            "type": "textarea",
+            "label": "提示词 (Prompt)",
+            "value": "请扮演文本分类器，根据信息输入和聊天上下文，判断输入信息属于哪种分类，以JSON格式输出分类信息。",
+            "valueType": "string",
+            "description": "简单分类无需调整提示词，可补充逻辑判断描述。"
+          },
+          {
+            "key": "labels",
+            "type": "addLabel",
+            "label": "标签",
+            "value": [],
+            "valueType": "boolean",
+            "description": "引用变量：{{labels}}"
+          }
+        ],
+        "outputs": [
+          {
+            "key": "matchResult",
+            "type": "source",
+            "label": "分类结果",
+            "targets": [],
+            "valueType": "string",
+            "description": "以JSON格式输出信息分类结果"
+          },
+          {
+            "key": "finish",
+            "type": "source",
+            "label": "模块运行结束",
+            "targets": [],
+            "valueType": "boolean",
+            "description": "运行完成后开关打开，下游链接组件开始运行。"
+          }
+        ]
       }
 }
 
