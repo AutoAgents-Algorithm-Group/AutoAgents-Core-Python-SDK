@@ -74,10 +74,7 @@ def main():
         name="信息分类",
         intro="这是一个专业的信息分类系统",
         category="文档处理",
-        prologue="你好！我是你的文档助手。",
-        shareAble=True,
-        allowVoiceInput=False,
-        autoSendVoice=False
+        prologue="你好！我是你的文档助手。"
     )
 
 

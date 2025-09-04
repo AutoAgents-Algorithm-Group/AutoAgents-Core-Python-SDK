@@ -122,6 +122,49 @@ class FlowGraph:
         )
 
 
+    def add_memory_variables(self, node_id: str, position: dict = None, variables: dict = None):
+        """
+        添加记忆变量节点的简化方法
+        
+        Args:
+            node_id: 节点ID
+            position: 节点位置，默认为{"x": 0, "y": 1500}
+            variables: 变量字典，格式为 {"key": "type"}，默认type为"string"
+            
+        Usage:
+            graph.add_memory_variables("memory1", variables={
+                "user_input": "string",
+                "ai_response": "string",
+                "file_content": "string"
+            })
+        """
+        if position is None:
+            position = {"x": 0, "y": 1500}
+            
+        if variables is None:
+            variables = {}
+            
+        # 创建memory variable inputs
+        memory_inputs = []
+        for key, value_type in variables.items():
+            if isinstance(value_type, str):
+                # 如果只提供类型字符串，使用默认格式
+                memory_inputs.append({
+                    "key": key,
+                    "value_type": value_type
+                })
+            else:
+                # 如果提供完整对象，直接使用
+                memory_inputs.append(value_type)
+        
+        # 使用通用add_node方法添加节点
+        self.add_node(
+            node_id=node_id,
+            module_type="addMemoryVariable",
+            position=position,
+            inputs=memory_inputs
+        )
+
     def add_node(self, node_id, module_type, position, inputs=None, outputs=None):
         tpl = deepcopy(NODE_TEMPLATES.get(module_type))
 
@@ -294,14 +337,14 @@ class FlowGraph:
                 avatar: str = "https://uat.agentspro.cn/assets/agent/avatar.png", # 头像URL
                 intro: Optional[str] = None, # 智能体介绍
                 chatAvatar: Optional[str] = None, # 对话头像URL
-                shareAble: Optional[bool] = None, # 是否可分享
+                shareAble: Optional[bool] = True, # 是否可分享
                 guides: Optional[List] = None, # 引导配置
                 category: Optional[str] = None, # 分类
                 state: Optional[int] = None, # 状态
                 prologue: Optional[str] = None, # 开场白
                 extJsonObj: Optional[Dict] = None, # 扩展JSON对象
-                allowVoiceInput: Optional[bool] = None, # 是否允许语音输入
-                autoSendVoice: Optional[bool] = None, # 是否自动发送语音
+                allowVoiceInput: Optional[bool] = False, # 是否允许语音输入
+                autoSendVoice: Optional[bool] = False, # 是否自动发送语音
                 **kwargs) -> None: # 其他参数
         """
         编译并创建智能体应用
