@@ -190,11 +190,27 @@ class FlowGraph:
                 # infoClass不需要用户手动指定outputs，自动从labels生成
                 outputs = None
             
+            # codeFragment：解析 input_labels / output_labels 为参数型 inputs/outputs
+            # 通过统一的解析函数转换为JSON模板所需的参数定义结构
+            codefragment_param_inputs = []
+            codefragment_param_outputs = []
+            if module_type == "codeFragment" and inputs and isinstance(inputs, dict):
+                inputs = deepcopy(inputs)  # 避免修改原始输入
+                parsed_inputs, parsed_outputs = self._parse_codefragment_labels(inputs)
+                codefragment_param_inputs.extend(parsed_inputs)
+                codefragment_param_outputs.extend(parsed_outputs)
+            
             # 转换简洁格式为展开格式
             converted_inputs = convert_json_to_json_list(inputs)
             converted_outputs = convert_json_to_json_list(outputs)
             final_inputs = merge_template_io(tpl.get("inputs", []), converted_inputs)
             final_outputs = merge_template_io(tpl.get("outputs", []), converted_outputs)
+
+            # 追加由 labels 生成的参数输入/输出
+            if module_type == "codeFragment" and codefragment_param_inputs:
+                final_inputs.extend(codefragment_param_inputs)
+            if module_type == "codeFragment" and codefragment_param_outputs:
+                final_outputs.extend(codefragment_param_outputs)
 
             if module_type == "infoClass" and infoclass_output_keys:
                 for key in infoclass_output_keys:
@@ -331,6 +347,100 @@ class FlowGraph:
         else:
             # 其他情况返回空数组
             return []
+
+    def _iter_label_items(self, raw_labels):
+        """
+        统一迭代标签声明为 (key, value) 形式，兼容多种声明方式。
+
+        已实现且支持的输入格式：
+        - dict：{k: v}，直接等价为 items()
+        - list（仅处理元素为 dict 的情况）：
+          1) {"key": k, "label": l, "valueType": vt}
+          2) {"key": k, "valueType": vt}（label 默认等于 key）
+          3) {k: {"label": l, "valueType": vt}}
+          4) {k: "label"}（valueType 默认为 "string"）
+
+        注意：
+        - list 中非 dict 的元素会被忽略（例如 ["a", "b"] 不会被解析）。
+        - 返回 list[tuple[key, value]]，其中 value 可能是 str 或 dict。
+        """
+        if isinstance(raw_labels, dict):
+            return list(raw_labels.items())
+        if isinstance(raw_labels, list):
+            items = []
+            for item in raw_labels:
+                if not isinstance(item, dict):
+                    continue
+                if item.get("key") is not None:
+                    items.append((item.get("key"), item))
+                elif len(item) == 1:
+                    k, v = next(iter(item.items()))
+                    items.append((k, v))
+            return items
+        return []
+
+    def _parse_codefragment_labels(self, config: Dict) -> Tuple[List[Dict], List[Dict]]:
+        """
+        解析 codeFragment 配置中的 input_labels / output_labels，构造参数型 inputs/outputs。
+
+        注意：本方法会就地从 config 中弹出（pop）"input_labels" 与 "output_labels" 字段。
+
+        入参与格式（示例）：
+        - input_labels 可以是：
+            {"title": "标题", "count": {"label": "数量", "valueType": "number"}}
+          或：
+            [{"key": "title", "label": "标题"}, {"key": "count", "valueType": "number"}]
+
+        返回：
+        - param_inputs: List[Dict]，形如
+            {"connected": True, "valueType": "string", "description": "", "label": "标题", "type": "parameter", "key": "title"}
+        - param_outputs: List[Dict]，形如
+            {"valueType": "string", "description": "", "label": "标题", "type": "parameter", "targets": [], "key": "title"}
+        """
+        param_inputs: List[Dict] = []
+        param_outputs: List[Dict] = []
+
+        if "input_labels" in config:
+            raw_in_labels = config.pop("input_labels", {})
+            for key, value in self._iter_label_items(raw_in_labels):
+                if key is None:
+                    continue
+                if isinstance(value, dict):
+                    label_text = value.get("label", str(key))
+                    value_type = value.get("valueType", "string")
+                else:
+                    label_text = str(value)
+                    value_type = "string"
+                param_inputs.append({
+                    "connected": True,
+                    "valueType": value_type,
+                    "description": "",
+                    "label": label_text,
+                    "type": "parameter",
+                    "key": key
+                })
+
+        if "output_labels" in config:
+            raw_out_labels = config.pop("output_labels", {})
+            for key, value in self._iter_label_items(raw_out_labels):
+                if key is None:
+                    continue
+                if isinstance(value, dict):
+                    label_text = value.get("label", str(key))
+                    value_type = value.get("valueType", "string")
+                else:
+                    label_text = str(value)
+                    value_type = "string"
+                param_outputs.append({
+                    "valueType": value_type,
+                    "description": "",
+                    "label": label_text,
+                    "type": "parameter",
+                    "targets": [],
+                    "key": key
+                })
+
+        return param_inputs, param_outputs
 
     def compile(self,
                 name: str = "未命名智能体", # 智能体名称
