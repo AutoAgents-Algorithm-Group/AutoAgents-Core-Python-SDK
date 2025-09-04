@@ -3,10 +3,14 @@ import sys
 import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from src.autoagentsai.graph import FlowGraph
+from src.autoagentsai.graph import FlowInterpreter
 
 def main():
-    # 你提供的JSON数据
+    """
+    测试FlowInterpreter的JSON到代码转换功能
+    演示新的实例化方式：先创建实例，再调用方法
+    """
+    # JSON数据：包含完整的工作流信息（节点和边）
     json_data = {
         "nodes": [
             {
@@ -154,13 +158,15 @@ def main():
         "viewport": {"x": 372.3680880974696, "y": -103.04498594189312, "zoom": 0.463331771321462}
     }
 
-    # 生成SDK代码
-    generated_code = FlowGraph.from_json_to_code(
-        json_data,
+    # 创建FlowInterpreter实例
+    interpreter = FlowInterpreter(
         auth_key="7217394b7d3e4becab017447adeac239",
         auth_secret="f4Ziua6B0NexIMBGj1tQEVpe62EhkCWB",
         base_url="https://uat.agentspro.cn"
     )
+    
+    # 生成SDK代码
+    generated_code = interpreter.from_json_to_code(json_data)
 
     # 打印生成的代码
     print("生成的SDK代码：")
@@ -173,6 +179,11 @@ def main():
         f.write(generated_code)
     
     print("\n代码已保存到 generated_workflow.py 文件中！")
+    print("\n✨ 新API优势:")
+    print("- 认证信息只需配置一次")
+    print("- 可以重复使用同一个interpreter实例")
+    print("- 方法调用更简洁：interpreter.from_json_to_code(json_data)")
+    print("- 面向对象设计，职责更清晰")
 
 if __name__ == "__main__":
     main()
