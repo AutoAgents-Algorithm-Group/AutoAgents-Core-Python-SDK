@@ -28,9 +28,9 @@ def main():
         }
 
     ]
-    output_labels=[
+    output_labels = [
         {
-            str('output_key'): {
+            str(uuid.uuid1()): {
                 "label": "output啊",
                 "valueType": "string"
             }
@@ -45,8 +45,9 @@ def main():
         inputs={
             "model": "doubao-deepseek-v3",
             "_language_": "python",
-            "_code_": "def userFunction(params):\n    result = {}\n    result['output_key'] = \"代码块处理了用户输入\"\n    result['input'] = params['" +
-                      input_label_keys[0] + "']\n    return result",
+            "_code_": "def userFunction(params):\n    result = {}\n    result['"
+                      + output_labels_keys[0] + "'] = \"代码块处理后的用户输入\"\n    result['input'] = params['"
+                      + input_label_keys[0] + "']\n    return result",
             "input_labels": input_labels,
             "output_labels": output_labels
         }
