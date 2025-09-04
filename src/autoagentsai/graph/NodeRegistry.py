@@ -792,11 +792,111 @@ NODE_TEMPLATES = {
             "description": "运行完成后开关打开，下游链接组件开始运行。"
           }
         ]
-      }
+    },
+    "codeFragment": {
+        "name": "代码块",
+        "intro": "通过编写代码对输入数据进行精确的处理与加工",
+        "category": "高阶能力",
+        "disabled": False,
+        "moduleType": "codeFragment",
+        "inputs": [
+            {
+                "key": "switch",
+                "type": "target",
+                "label": "联动激活",
+                "value": False,
+                "keyType": "trigger",
+                "connected": True,
+                "valueType": "boolean",
+                "description": "同时满足上游所有条件方可激活当前组件执行逻辑"
+            },
+            {
+                "key": "switchAny",
+                "type": "target",
+                "label": "任一激活",
+                "value": False,
+                "keyType": "triggerAny",
+                "connected": True,
+                "valueType": "boolean",
+                "description": "同时满足上游任一条件即可激活当前组件执行逻辑"
+            },
+            {
+                "key": "_language_",
+                "type": "radio",
+                "label": "语言",
+                "value": "js",
+                "options": [
+                    {
+                        "label": "javascript",
+                        "value": "js"
+                    },
+                    {
+                        "label": "python",
+                        "value": "python"
+                    }
+                ],
+                "valueType": "string",
+                "description": "选择编程语言"
+            },
+            {
+                "key": "_description_",
+                "type": "textarea",
+                "label": "代码描述",
+                "connected": False,
+                "valueType": "string",
+                "description": "代码描述，非必填"
+            },
+            {
+                "key": "_code_",
+                "type": "textarea",
+                "label": "代码内容",
+                "value": "(\n      function userFunction(param) { \n        var input1 = param['input_key'];\n        var result = {};\n        result['output_key'] = input1 + \" append string\";\n        return result;\n      }\n )",
+                "connected": False,
+                "valueType": "string",
+                "description": "用户编写的函数，Python函数名需指定为userFunction，输入输出为Key-Value数据类型，Key为String类型，Key和入参和岀参的设置对应"
+            }
+        ],
+        "outputs": [
+            {
+                "key": "_runSuccess_",
+                "type": "source",
+                "label": "执行成功",
+                "targets": [],
+                "valueType": "boolean",
+                "description": "代码执行成功"
+            },
+            {
+                "key": "_runFailed_",
+                "type": "source",
+                "label": "执行异常",
+                "targets": [],
+                "valueType": "boolean",
+                "description": "代码执行异常"
+            },
+            {
+                "key": "_runResult_",
+                "type": "source",
+                "label": "执行结果",
+                "targets": [],
+                "valueType": "string",
+                "description": "代码执行的全部结果"
+            },
+            {
+                "key": "finish",
+                "type": "source",
+                "label": "模块运行结束",
+                "targets": [],
+                "required": False,
+                "valueType": "boolean",
+                "description": "运行完成后开关打开,下游链接组件开始运行。"
+            }
+        ]
+    }
 }
 
 
-def merge_template_io(template_io: List[Dict[str, Any]], custom_io: Optional[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+def merge_template_io(template_io: List[Dict[str, Any]], custom_io: Optional[List[Dict[str, Any]]]) -> List[
+    Dict[str, Any]]:
     """
     合并模板IO配置和用户自定义IO配置
     
