@@ -2,8 +2,6 @@ import os
 import sys
 import uuid
 
-from openpyxl.styles.builtins import output
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from src.autoagentsai.graph import FlowGraph
 
@@ -28,37 +26,21 @@ def main():
             "initialInput": True
         },
     )
-    label1 = str(uuid.uuid1())
-    label2 = str(uuid.uuid1())
+
+    labels = {
+        str(uuid.uuid1()): "买菜",
+        str(uuid.uuid1()): "买肉"
+    }
 
     graph.add_node(
         node_id="infoclass1",
         module_type="infoClass",
         position={"x": 500, "y": 300},
         inputs={
-            "model": "oneapi-deepseek:deepseek-chat",
-            "quotePrompt": """
-               请扮演文本分类器，根据信息输入和聊天上下文，判断输入信息属于哪种分类，以JSON格式输出分类信息。
+            "model": "doubao-deepseek-v3",
+            "quotePrompt": """请扮演文本分类器，根据信息输入和聊天上下文，判断输入信息属于哪种分类，以JSON格式输出分类信息。
             """,
-            "labels": {
-                label1: "买菜",
-                label2: "买肉"
-            }
-        },
-        outputs={
-            label1:[
-              {
-                "targetHandle": "switch",
-                "target": "confirmreply1"
-              }
-            ],
-            label2:[
-              {
-                "targetHandle": "switch",
-                "target": "confirmreply2"
-              }
-            ]
-
+            "labels": labels
         }
     )
     graph.add_node(
@@ -79,15 +61,18 @@ def main():
             "stream": True
         }
     )
+    # 获取labels的键用于连接
+    label_keys = list(labels.keys())
+    
     graph.add_edge("simpleInputId", "infoclass1", "finish", "switchAny")
     graph.add_edge("simpleInputId","infoclass1","userChatInput","text")
-    graph.add_edge("infoclass1","confirmreply1",label1,"switchAny")
-    graph.add_edge("infoclass1","confirmreply2",label2,"switchAny")
+    graph.add_edge("infoclass1","confirmreply1", label_keys[0], "switchAny")
+    graph.add_edge("infoclass1","confirmreply2", label_keys[1], "switchAny")
 
 
     # print(graph.to_json())
 
-    # 编译,导入配置，点击确定
+    # 编译, 导入配置，点击确定
     graph.compile(
         name="信息分类",
         intro="这是一个专业的信息分类系统",

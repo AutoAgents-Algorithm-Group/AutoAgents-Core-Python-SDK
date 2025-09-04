@@ -90,10 +90,23 @@ class FlowGraph:
             final_inputs = process_add_memory_variable(tpl.get("inputs", [])[0],inputs)
             final_outputs = []
         else:
-            # 对于infoClass类型，预处理labels字段
-            if module_type == "infoClass" and inputs and "labels" in inputs:
-                inputs = deepcopy(inputs)  # 避免修改原始输入
-                inputs["labels"] = self._convert_labels_dict_to_list(inputs["labels"])
+            # 对于infoClass类型，预处理labels字段并自动生成outputs
+            infoclass_output_keys = []
+            if module_type == "infoClass":
+                if inputs and "labels" in inputs:
+                    inputs = deepcopy(inputs)  # 避免修改原始输入
+                    original_labels = inputs["labels"]
+                    inputs["labels"] = self._convert_labels_dict_to_list(original_labels)
+                    
+                    # 自动从labels提取输出标签
+                    if isinstance(original_labels, dict):
+                        infoclass_output_keys = list(original_labels.keys())
+                    elif isinstance(original_labels, list):
+                        # 如果是数组格式 [{"key": key1, "value": "value1"}]
+                        infoclass_output_keys = [item.get("key") for item in original_labels if item.get("key")]
+                
+                # infoClass不需要用户手动指定outputs，自动从labels生成
+                outputs = None
             
             # 转换简洁格式为展开格式
             converted_inputs = convert_json_to_json_list(inputs)
@@ -101,17 +114,15 @@ class FlowGraph:
             final_inputs = merge_template_io(tpl.get("inputs", []), converted_inputs)
             final_outputs = merge_template_io(tpl.get("outputs", []), converted_outputs)
 
-            if module_type == "infoClass":
-                if outputs is not None:
-                    for key, value in outputs.items():
-                        # outputs里元素如果是labels相关的才会添加
-                        if 'target' in list(value[0].keys()) and 'targetHandle' in list(value[0].keys()):
-                            final_outputs.append({
-                                "valueType": "boolean",
-                                "type": "source",
-                                "key": key,
-                                "targets": value
-                            })
+            if module_type == "infoClass" and infoclass_output_keys:
+                for key in infoclass_output_keys:
+                    # 为infoClass的每个标签添加输出字段，targets将通过add_edge自动构建
+                    final_outputs.append({
+                        "valueType": "boolean",
+                        "type": "source",
+                        "key": key,
+                        "targets": []  # 初始为空，通过update_node从edges自动构建
+                    })
 
 
         node = FlowNode(

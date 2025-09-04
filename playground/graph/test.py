@@ -51,8 +51,7 @@ def main():
         position={"x": 1500, "y": 300},
         inputs={
             "model": "doubao-deepseek-v3",
-            "quotePrompt": """
-<角色>
+            "quotePrompt": """<角色>
 你是一个文件解答助手，你可以根据文件内容，解答用户的问题
 </角色>
 
