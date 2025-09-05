@@ -508,7 +508,10 @@ class FlowGraph:
         source_type = get_field_type(source, source_handle, "outputs")
         target_type = get_field_type(target, target_handle, "inputs")
 
+        # 如果 source_type 或 target_type 为 "any"，则不需要检查类型一致性
+        type_compatible = (source_type == "any" or target_type == "any") or (source_type == target_type)
+        
         return (
             source_handle,
-            target_handle if source_handle and target_handle and source_type == target_type else ""
+            target_handle if source_handle and target_handle and type_compatible else ""
         )

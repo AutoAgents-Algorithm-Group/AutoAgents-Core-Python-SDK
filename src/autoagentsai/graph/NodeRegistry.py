@@ -891,6 +891,94 @@ NODE_TEMPLATES = {
                 "description": "运行完成后开关打开,下游链接组件开始运行。"
             }
         ]
+    },
+    "forEach": {
+        "name": "循环",
+        "intro": "依次读取输入数组中的元素，执行循环流程",
+        "category": "高阶能力",
+        "disabled": False,
+        "moduleType": "forEach",
+        "inputs": [
+            {
+                "key": "switch",
+                "type": "target",
+                "label": "联动激活",
+                "value": False,
+                "keyType": "trigger",
+                "connected": True,
+                "valueType": "boolean",
+                "description": "同时满足上游所有条件方可激活当前组件执行逻辑"
+            },
+            {
+                "key": "switchAny",
+                "type": "target",
+                "label": "任一激活",
+                "value": False,
+                "keyType": "triggerAny",
+                "connected": True,
+                "valueType": "boolean",
+                "description": "同时满足上游任一条件即可激活当前组件执行逻辑"
+            },
+            {
+                "key": "items",
+                "type": "target",
+                "label": "信息输入",
+                "value": "",
+                "connected": True,
+                "valueType": "any",
+                "description": "JSON数组或者目标对象"
+            },
+            {
+                "key": "index",
+                "type": "loopMemoryVar",
+                "label": "元素序号",
+                "connected": False,
+                "valueType": "number",
+                "description": "记录执行循环的次数"
+            },
+            {
+                "key": "item",
+                "type": "loopMemoryVar",
+                "label": "元素值",
+                "connected": False,
+                "valueType": "string",
+                "description": "记录执行数组的内容"
+            },
+            {
+                "key": "length",
+                "type": "loopMemoryVar",
+                "label": "数组长度",
+                "connected": False,
+                "valueType": "number",
+                "description": "执行数组的长度"
+            },
+            {
+                "key": "loopEnd",
+                "type": "target",
+                "label": "循环单元终点",
+                "connected": True,
+                "valueType": "boolean",
+                "description": "循环单元终点"
+            }
+        ],
+        "outputs": [
+            {
+                "key": "loopStart",
+                "type": "source",
+                "label": "循环单元起点",
+                "targets": [],
+                "valueType": "boolean",
+                "description": "循环单元起点"
+            },
+            {
+                "key": "finish",
+                "type": "source",
+                "label": "模块运行结束",
+                "targets": [],
+                "valueType": "boolean",
+                "description": "运行完成后开关打开,下游链接组件开始运行。"
+            }
+        ],
     }
 }
 
