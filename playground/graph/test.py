@@ -16,14 +16,14 @@ def main():
         base_url="https://uat.agentspro.cn"
     )
 
-    # 设置起始节点 - 直接传State
+    # 设置起始节点
     graph.add_start_node(
         state=QuestionInputState(
             uploadFile=True
         )
     )
 
-    # PDF转MD节点 - 直接传State
+    # PDF转MD节点
     graph.add_node(
         id="pdf2md1",
         state=Pdf2MdState(
@@ -31,7 +31,7 @@ def main():
         )
     )
 
-    # 确认回复节点 - 直接传State
+    # 确认回复节点
     graph.add_node(
         id="confirmreply1",
         state=ConfirmReplyState(
@@ -40,7 +40,7 @@ def main():
         )
     )
 
-    # AI对话节点 - 直接传State
+    # AI对话节点
     graph.add_node(
         id="ai1",
         state=AiChatState(
@@ -62,7 +62,7 @@ def main():
         )
     )
 
-    # 记忆变量节点 - 直接传State
+    # 记忆变量节点
     graph.add_memory_variables(
         id="addMemoryVariable1",
         state=AddMemoryVariableState(

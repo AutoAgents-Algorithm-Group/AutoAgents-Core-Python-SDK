@@ -17,7 +17,7 @@ def main():
         base_url="https://uat.agentspro.cn"
     )
     
-    # 设置起始节点 - 直接传State
+    # 设置起始节点
     graph.add_start_node(
         state=QuestionInputState(
             inputText=True,
@@ -34,7 +34,7 @@ def main():
         str(uuid.uuid1()): "买肉"
     }
 
-    # 创建信息分类节点 - 直接传State
+    # 创建信息分类节点
     graph.add_node(
         id="infoclass1",
         state=InfoClassState(
@@ -52,7 +52,7 @@ def main():
         )
     )
     
-    # 创建回复节点 - 买菜 - 直接传State
+    # 创建回复节点 - 买菜
     graph.add_node(
         id="buyVeg",
         state=ConfirmReplyState(
@@ -61,7 +61,7 @@ def main():
         )
     )
     
-    # 创建回复节点 - 买肉 - 直接传State
+    # 创建回复节点 - 买肉
     graph.add_node(
         id="buyMeat",
         state=ConfirmReplyState(
@@ -71,6 +71,7 @@ def main():
     )
     
     # 连接节点
+    graph.add_edge(graph.START, "infoclass1", "finish", "switchAny")
     graph.add_edge(graph.START, "infoclass1", "userChatInput", "text")
     graph.add_edge("infoclass1", "buyVeg", list(labels.keys())[0], "text")
     graph.add_edge("infoclass1", "buyMeat", list(labels.keys())[1], "text")
