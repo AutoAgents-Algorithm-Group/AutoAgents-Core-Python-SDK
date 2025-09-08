@@ -6,24 +6,22 @@ from src.autoagentsai.graph import FlowGraph, START
 from src.autoagentsai.types import QuestionInputState, Pdf2MdState, ConfirmReplyState, AiChatState, AddMemoryVariableState
 
 
-def main():
-    """文档助手工作流 - 简洁的纯State API"""
-    
-    # 创建工作流图
+def main():   
+    # 初始化工作流
     graph = FlowGraph(
         personal_auth_key="7217394b7d3e4becab017447adeac239",
         personal_auth_secret="f4Ziua6B0NexIMBGj1tQEVpe62EhkCWB",
         base_url="https://uat.agentspro.cn"
     )
 
-    # 设置起始节点
-    graph.add_start_node(
+    # 添加节点
+    graph.add_node(
+        id=START,
         state=QuestionInputState(
             uploadFile=True
         )
     )
 
-    # PDF转MD节点
     graph.add_node(
         id="pdf2md1",
         state=Pdf2MdState(
@@ -31,7 +29,7 @@ def main():
         )
     )
 
-    # 确认回复节点
+
     graph.add_node(
         id="confirmreply1",
         state=ConfirmReplyState(
@@ -40,7 +38,6 @@ def main():
         )
     )
 
-    # AI对话节点
     graph.add_node(
         id="ai1",
         state=AiChatState(
@@ -62,8 +59,7 @@ def main():
         )
     )
 
-    # 记忆变量节点
-    graph.add_memory_variables(
+    graph.add_node(
         id="addMemoryVariable1",
         state=AddMemoryVariableState(
             variables={
@@ -74,15 +70,19 @@ def main():
         )
     )
 
-    # 连接节点
+    # 添加连接边
     graph.add_edge(START, "pdf2md1", "finish", "switchAny")
     graph.add_edge(START, "pdf2md1", "files", "files")
     graph.add_edge(START, "addMemoryVariable1", "userChatInput", "question1_userChatInput")
+
     graph.add_edge("pdf2md1", "confirmreply1", "finish", "switchAny")
     graph.add_edge("pdf2md1", "addMemoryVariable1", "pdf2mdResult", "pdf2md1_pdf2mdResult")
+
     graph.add_edge("confirmreply1", "ai1", "finish", "switchAny")
+
     graph.add_edge("ai1", "addMemoryVariable1", "answerText", "ai1_answerText")
     
+
     # 编译工作流
     graph.compile(
         name="文档助手",

@@ -18,7 +18,8 @@ def main():
     )
 
     # 设置起始节点 - 直接传State
-    graph.add_start_node(
+    graph.add_node(
+        id=START,
         state=QuestionInputState()
     )
 

@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict
-from ..api.ChatApi import get_jwt_token_api
-from ..api.KbApi import (
+from ..api.ChatAPI import get_jwt_token_api
+from ..api.KbAPI import (
     create_kb_api, query_kb_list_api, modify_kb_api, delete_kb_api, get_kb_detail_api
 )
 

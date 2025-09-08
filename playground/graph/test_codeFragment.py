@@ -8,17 +8,16 @@ from src.autoagentsai.types import QuestionInputState, CodeFragmentState, Confir
 
 
 def main():
-    """代码块执行工作流 - 简洁的纯State API"""
-    
-    # 创建工作流图
+    # 初始化工作流
     graph = FlowGraph(
         personal_auth_key="833c6771a8ae4ee88e6f4d5f7f2a62e5",
         personal_auth_secret="XceT7Cf86SfX2LNhl5I0QuOYomt1NvqZ",
         base_url="https://uat.agentspro.cn"
     )
 
-    # 设置起始节点 - 直接传State
-    graph.add_start_node(
+    # 添加节点
+    graph.add_node(
+        id=START,
         state=QuestionInputState()
     )
 
@@ -42,7 +41,6 @@ def main():
     input_label_keys = [list(input_label.keys())[0] for input_label in input_labels]
     output_labels_keys = [list(output_label.keys())[0] for output_label in output_labels]
 
-    # 代码块节点 - 直接传State
     graph.add_node(
         id="codeFragment1",
         state=CodeFragmentState(
@@ -56,7 +54,6 @@ def main():
         )
     )
 
-    # 确认回复节点 - 直接传State
     graph.add_node(
         id="confirmreply1",
         state=ConfirmReplyState(
@@ -64,10 +61,11 @@ def main():
         )
     )
 
-    # 连接节点
+    # 添加连接边
     graph.add_edge(START, "codeFragment1", "finish", "switchAny")
     graph.add_edge(START, "codeFragment1", "userChatInput", input_label_keys[0])
     graph.add_edge("codeFragment1", "confirmreply1", output_labels_keys[0], "text")
+    
 
     # 编译工作流
     graph.compile(

@@ -1,5 +1,5 @@
 from typing import Generator, Optional, List, Dict, Union, IO, Any
-from ..api.ChatApi import chat_stream_api, get_chat_history_api, get_jwt_token_api
+from ..api.ChatAPI import chat_stream_api, get_chat_history_api, get_jwt_token_api
 
 class ChatClient:
     def __init__(self, agent_id: str, personal_auth_key: str, personal_auth_secret: str, base_url: str = "https://uat.agentspro.cn"):

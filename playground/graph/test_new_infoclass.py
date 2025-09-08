@@ -8,17 +8,16 @@ from src.autoagentsai.types import QuestionInputState, InfoClassState, ConfirmRe
 
 
 def main():
-    """测试信息分类工作流 - 简洁的纯State API"""
-    
-    # 创建工作流图
+    # 初始化工作流
     graph = FlowGraph(
         personal_auth_key="833c6771a8ae4ee88e6f4d5f7f2a62e5",
         personal_auth_secret="XceT7Cf86SfX2LNhl5I0QuOYomt1NvqZ",
         base_url="https://uat.agentspro.cn"
     )
     
-    # 设置起始节点
-    graph.add_start_node(
+    # 添加节点
+    graph.add_node(
+        id=START,
         state=QuestionInputState(
             inputText=True,
             uploadFile=False,
@@ -28,13 +27,12 @@ def main():
         )
     )
     
-    # 创建分类标签
+    # 分类标签
     labels = {
         str(uuid.uuid1()): "买菜",
         str(uuid.uuid1()): "买肉"
     }
 
-    # 创建信息分类节点
     graph.add_node(
         id="infoclass1",
         state=InfoClassState(
@@ -52,7 +50,6 @@ def main():
         )
     )
     
-    # 创建回复节点 - 买菜
     graph.add_node(
         id="buyVeg",
         state=ConfirmReplyState(
@@ -61,7 +58,6 @@ def main():
         )
     )
     
-    # 创建回复节点 - 买肉
     graph.add_node(
         id="buyMeat",
         state=ConfirmReplyState(
@@ -70,12 +66,13 @@ def main():
         )
     )
     
-    # 连接节点
+    # 添加连接边
     graph.add_edge(START, "infoclass1", "finish", "switchAny")
     graph.add_edge(START, "infoclass1", "userChatInput", "text")
     graph.add_edge("infoclass1", "buyVeg", list(labels.keys())[0], "text")
     graph.add_edge("infoclass1", "buyMeat", list(labels.keys())[1], "text")
     
+
     # 编译工作流
     graph.compile(
         name="信息分类",

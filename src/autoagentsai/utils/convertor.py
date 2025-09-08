@@ -65,30 +65,3 @@ def convert_csv_to_json_list(csv_file_path: str):
         print(f"读取CSV文件失败: {csv_file_path}, 错误: {e}")
         return []
 
-
-def convert_json_to_json_list(data: Optional[Union[Dict, List]]) -> Optional[List[Dict]]:
-    """
-    转换简化格式为展开的列表格式
-    
-    Args:
-        data: 可以是 None 或 dict
-            - None: 返回 None
-            - dict: 简化格式 {"key1": "value1", "key2": "value2"} 
-              转换为 [{"key": "key1", "value": "value1"}, {"key": "key2", "value": "value2"}]
-            
-    Returns:
-        None 或 list 格式的数据
-    """
-    if data is None:
-        return None
-    
-    if isinstance(data, dict):
-        # 字典格式：直接包含键值对
-        # {"key1": "value1", "key2": "value2"} 转换为 [{"key": "key1", "value": "value1"}, {"key": "key2", "value": "value2"}]
-        converted = []
-        for key, value in data.items():
-            converted.append({"key": key, "value": value})
-        return converted
-    
-    # 其他类型不支持
-    raise ValueError(f"Unsupported input format: {type(data)}. Expected dict or None.")
