@@ -681,7 +681,7 @@ NODE_TEMPLATES = {
         ],
         "category": "高阶能力",
         "moduleType": "addMemoryVariable"
-      },
+    },
     "infoClass":{
         "name": "信息分类",
         "intro": "根据提示词完成信息分类，且不同的信息类型配置不同的回复方式和内容。",

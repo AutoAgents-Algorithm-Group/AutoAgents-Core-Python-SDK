@@ -4,8 +4,10 @@ from copy import deepcopy
 from typing import Optional, List, Dict, Tuple
 
 from .NodeRegistry import NODE_TEMPLATES, merge_template_io
+from .StateConverter import create_node_from_state, state_to_module_type, state_to_inputs_outputs
 from ..api.GraphApi import create_app_api, process_add_memory_variable
 from ..types.GraphTypes import CreateAppParams
+from ..types.NodeStates import BaseNodeState
 from ..utils.convertor import convert_json_to_json_list
 
 
@@ -88,84 +90,101 @@ class FlowGraph:
         self.personal_auth_secret = personal_auth_secret
         self.base_url = base_url
 
-    def set_start_node(self, position: dict = None, inputs: dict = None):
+    def add_start_node(self, *, position: dict = None, state):
         """
         设置工作流的起始节点（questionInput类型）
-        起始节点ID固定为"SimpleInputId"
+        起始节点ID固定为"simpleInputId"
         
         Args:
             position: 节点位置，默认为{"x": 0, "y": 300}
-            inputs: 输入配置，默认为{"inputText": True, 其他为False}
+            state: QuestionInputState状态对象
+            
+        Usage:
+            start_state = QuestionInputState(inputText=True, uploadFile=True)
+            graph.set_start_node(position={"x": 0, "y": 300}, state=start_state)
+            
+            # 位置可以省略
+            graph.set_start_node(state=start_state)
         """
         if position is None:
             position = {"x": 0, "y": 300}
             
-        # 默认配置：只启用文本输入
-        default_inputs = {
-            "inputText": True,
-            "uploadFile": False,
-            "uploadPicture": False,
-            "fileContrast": False,
-            "initialInput": True
-        }
-        
-        # 如果用户提供了inputs，则合并配置
-        if inputs:
-            default_inputs.update(inputs)
-        
-        # 使用通用add_node方法添加起始节点
         self.add_node(
-            node_id=self.START,
-            module_type="questionInput",
+            id=self.START,
             position=position,
-            inputs=default_inputs
+            state=state
         )
 
 
-    def add_memory_variables(self, node_id: str, position: dict = None, variables: dict = None):
+    def add_memory_variables(self, id: str, *, position: dict = None, state):
         """
         添加记忆变量节点的简化方法
         
         Args:
-            node_id: 节点ID
+            id: 节点ID
             position: 节点位置，默认为{"x": 0, "y": 1500}
-            variables: 变量字典，格式为 {"key": "type"}，默认type为"string"
+            state: AddMemoryVariableState状态对象
             
         Usage:
-            graph.add_memory_variables("memory1", variables={
-                "user_input": "string",
-                "ai_response": "string",
-                "file_content": "string"
+            state = AddMemoryVariableState(variables={
+                "user_input": "string", 
+                "ai_response": "string"
             })
+            graph.add_memory_variables("memory1", state=state)
+            
+            # 位置可以省略，将自动布局
+            graph.add_memory_variables("memory1", state=state)
         """
         if position is None:
             position = {"x": 0, "y": 1500}
             
-        if variables is None:
-            variables = {}
-            
-        # 创建memory variable inputs
-        memory_inputs = []
-        for key, value_type in variables.items():
-            if isinstance(value_type, str):
-                # 如果只提供类型字符串，使用默认格式
-                memory_inputs.append({
-                    "key": key,
-                    "value_type": value_type
-                })
-            else:
-                # 如果提供完整对象，直接使用
-                memory_inputs.append(value_type)
-        
-        # 使用通用add_node方法添加节点
         self.add_node(
-            node_id=node_id,
-            module_type="addMemoryVariable",
+            id=id,
             position=position,
-            inputs=memory_inputs
+            state=state
         )
 
-    def add_node(self, node_id, module_type, position, inputs=None, outputs=None):
+    def add_node(self, id: str, *, position=None, state):
+        """
+        添加节点到工作流图中
+        
+        Args:
+            id: 节点ID
+            position: 节点位置，格式为 {"x": 100, "y": 200}，默认自动布局
+            state: 节点状态对象（LangGraph风格）
+            
+        Usage:
+            state = AiChatState(model="doubao-deepseek-v3", text="hello", temperature=0.7)
+            graph.add_node("node1", position={"x": 100, "y": 200}, state=state)
+            
+            # 位置可以省略，将自动布局
+            graph.add_node("node2", state=InfoClassState(labels={"A": "选项A"}))
+        """
+        
+        # 验证state参数
+        if not isinstance(state, BaseNodeState):
+            raise ValueError("state parameter must be an instance of BaseNodeState")
+            
+        # 自动布局位置（如果没有提供）
+        if position is None:
+            # 简单的自动布局：水平排列，每个节点间距300px
+            position = {"x": len(self.nodes) * 500, "y": 300}
+            
+        # 从state中提取所有配置
+        extracted_node_id, extracted_module_type, extracted_position, extracted_inputs, extracted_outputs = create_node_from_state(
+            state, id, position
+        )
+        
+        # 使用从state提取的配置
+        module_type = extracted_module_type
+        inputs = extracted_inputs
+        outputs = extracted_outputs
+        
+        # 特殊处理addMemoryVariable的情况
+        if module_type == "addMemoryVariable" and isinstance(extracted_inputs, list):
+            # 对于addMemoryVariable，extracted_inputs是特殊格式的列表
+            return self._add_memory_variable_from_state(id, position, extracted_inputs)
+            
         tpl = deepcopy(NODE_TEMPLATES.get(module_type))
 
         if module_type == "addMemoryVariable":
@@ -224,13 +243,39 @@ class FlowGraph:
 
 
         node = FlowNode(
-            node_id=node_id,
+            node_id=id,
             module_type=module_type,
             position=position,
             inputs=final_inputs,
             outputs=final_outputs
         )
         node.data["name"]=tpl.get("name")
+        node.data["intro"] = tpl.get("intro")
+        if tpl.get("category") is not None:
+            node.data["category"] = tpl["category"]
+        self.nodes.append(node)
+        
+    def _add_memory_variable_from_state(self, id: str, position: Dict[str, float], memory_inputs: List[Dict[str, str]]):
+        """
+        从state添加记忆变量节点的特殊处理方法
+        
+        Args:
+            node_id: 节点ID
+            position: 节点位置
+            memory_inputs: 记忆变量输入列表
+        """
+        tpl = deepcopy(NODE_TEMPLATES.get("addMemoryVariable"))
+        final_inputs = process_add_memory_variable(tpl.get("inputs", [])[0], memory_inputs)
+        final_outputs = []
+        
+        node = FlowNode(
+            node_id=id,
+            module_type="addMemoryVariable",
+            position=position,
+            inputs=final_inputs,
+            outputs=final_outputs
+        )
+        node.data["name"] = tpl.get("name")
         node.data["intro"] = tpl.get("intro")
         if tpl.get("category") is not None:
             node.data["category"] = tpl["category"]
