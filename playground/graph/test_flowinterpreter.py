@@ -3,7 +3,7 @@ import sys
 import json
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-from src.autoagentsai.graph import FlowInterpreter
+from src.autoagentsai.graph import FlowInterpreter, START
 
 
 def main():
@@ -67,8 +67,8 @@ def main():
             }
         ],
         "edges": [
-            {"source": "simpleInputId", "target": "pdf2md1", "sourceHandle": "finish", "targetHandle": "switchAny"},
-            {"source": "simpleInputId", "target": "pdf2md1", "sourceHandle": "files", "targetHandle": "files"},
+            {"source": START, "target": "pdf2md1", "sourceHandle": "finish", "targetHandle": "switchAny"},
+            {"source": START, "target": "pdf2md1", "sourceHandle": "files", "targetHandle": "files"},
             {"source": "pdf2md1", "target": "confirmreply1", "sourceHandle": "finish", "targetHandle": "switchAny"}
         ]
     }

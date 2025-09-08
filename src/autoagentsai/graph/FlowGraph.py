@@ -11,6 +11,9 @@ from ..types.NodeStates import BaseNodeState
 from ..utils.convertor import convert_json_to_json_list
 
 
+START = "simpleInputId"
+# END = None
+
 class FlowNode:
     def __init__(self, node_id, module_type, position, inputs=None, outputs=None):
         self.id = node_id
@@ -80,10 +83,6 @@ class FlowGraph:
         self.nodes = []
         self.edges = []
         self.viewport = {"x": 0, "y": 0, "zoom": 1.0}
-
-        # 开始与结束节点ID
-        self.START = "simpleInputId"
-        self.END = None
         
         # 认证信息
         self.personal_auth_key = personal_auth_key
@@ -106,12 +105,10 @@ class FlowGraph:
             # 位置可以省略
             graph.set_start_node(state=start_state)
         """
-        if position is None:
-            position = {"x": 0, "y": 300}
             
         self.add_node(
-            id=self.START,
-            position=position,
+            id=START,
+            position={"x": 0, "y": 300},
             state=state
         )
 

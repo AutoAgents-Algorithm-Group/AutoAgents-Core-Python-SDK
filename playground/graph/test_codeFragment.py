@@ -3,7 +3,7 @@ import sys
 import uuid
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-from src.autoagentsai.graph import FlowGraph
+from src.autoagentsai.graph import FlowGraph, START
 from src.autoagentsai.types import QuestionInputState, CodeFragmentState, ConfirmReplyState
 
 
@@ -65,8 +65,8 @@ def main():
     )
 
     # 连接节点
-    graph.add_edge(graph.START, "codeFragment1", "finish", "switchAny")
-    graph.add_edge(graph.START, "codeFragment1", "userChatInput", input_label_keys[0])
+    graph.add_edge(START, "codeFragment1", "finish", "switchAny")
+    graph.add_edge(START, "codeFragment1", "userChatInput", input_label_keys[0])
     graph.add_edge("codeFragment1", "confirmreply1", output_labels_keys[0], "text")
 
     # 编译工作流

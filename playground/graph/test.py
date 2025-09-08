@@ -2,7 +2,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-from src.autoagentsai.graph import FlowGraph
+from src.autoagentsai.graph import FlowGraph, START
 from src.autoagentsai.types import QuestionInputState, Pdf2MdState, ConfirmReplyState, AiChatState, AddMemoryVariableState
 
 
@@ -75,9 +75,9 @@ def main():
     )
 
     # 连接节点
-    graph.add_edge(graph.START, "pdf2md1", "finish", "switchAny")
-    graph.add_edge(graph.START, "pdf2md1", "files", "files")
-    graph.add_edge(graph.START, "addMemoryVariable1", "userChatInput", "question1_userChatInput")
+    graph.add_edge(START, "pdf2md1", "finish", "switchAny")
+    graph.add_edge(START, "pdf2md1", "files", "files")
+    graph.add_edge(START, "addMemoryVariable1", "userChatInput", "question1_userChatInput")
     graph.add_edge("pdf2md1", "confirmreply1", "finish", "switchAny")
     graph.add_edge("pdf2md1", "addMemoryVariable1", "pdf2mdResult", "pdf2md1_pdf2mdResult")
     graph.add_edge("confirmreply1", "ai1", "finish", "switchAny")
