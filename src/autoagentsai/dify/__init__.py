@@ -1,7 +1,9 @@
 # src/autoagentsai/dify/__init__.py
-from .DifyGraph import DifyGraph
-from .DifyNodeRegistry import DIFY_NODE_TEMPLATES
+from .DifyGraph import DifyGraphBuilder
 from .DifyTypes import *
 
-__all__ = ["DifyGraph", "DIFY_NODE_TEMPLATES"]
+# 为了兼容性，将DifyGraphBuilder导出为DifyGraph
+DifyGraph = DifyGraphBuilder
+
+__all__ = ["DifyGraph", "DifyGraphBuilder"]
 

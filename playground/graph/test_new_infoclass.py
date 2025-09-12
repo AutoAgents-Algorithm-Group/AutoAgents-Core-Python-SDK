@@ -69,6 +69,7 @@ def main():
     # 添加连接边
     graph.add_edge(START, "infoclass1", "finish", "switchAny")
     graph.add_edge(START, "infoclass1", "userChatInput", "text")
+    
     graph.add_edge("infoclass1", "buyVeg", list(labels.keys())[0], "text")
     graph.add_edge("infoclass1", "buyMeat", list(labels.keys())[1], "text")
     

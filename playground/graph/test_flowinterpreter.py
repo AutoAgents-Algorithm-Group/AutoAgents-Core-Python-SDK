@@ -6,9 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 from src.autoagentsai.graph import FlowInterpreter, START
 
 
-def main():
-    """FlowInterpreter JSON转代码 - 简洁API"""
-    
+def main():    
     # JSON数据：包含完整的工作流信息
     json_data = {
         "nodes": [
@@ -67,8 +65,8 @@ def main():
             }
         ],
         "edges": [
-            {"source": START, "target": "pdf2md1", "sourceHandle": "finish", "targetHandle": "switchAny"},
-            {"source": START, "target": "pdf2md1", "sourceHandle": "files", "targetHandle": "files"},
+            {"source": "simpleInputId", "target": "pdf2md1", "sourceHandle": "finish", "targetHandle": "switchAny"},
+            {"source": "simpleInputId", "target": "pdf2md1", "sourceHandle": "files", "targetHandle": "files"},
             {"source": "pdf2md1", "target": "confirmreply1", "sourceHandle": "finish", "targetHandle": "switchAny"}
         ]
     }

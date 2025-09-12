@@ -64,6 +64,7 @@ def main():
     # 添加连接边
     graph.add_edge(START, "codeFragment1", "finish", "switchAny")
     graph.add_edge(START, "codeFragment1", "userChatInput", input_label_keys[0])
+    
     graph.add_edge("codeFragment1", "confirmreply1", output_labels_keys[0], "text")
     
 
