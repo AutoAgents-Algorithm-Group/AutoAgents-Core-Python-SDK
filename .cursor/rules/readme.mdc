@@ -1,0 +1,499 @@
+---
+globs: README.md,README-CN.md
+---
+
+# README Documentation Guidelines
+
+This rule provides guidance for creating and maintaining comprehensive README documentation for the Atlas project.
+
+## 📑 README Structure Template
+
+### Atlas Modern README Layout
+```markdown
+<div align="center">
+
+<img src="https://img.shields.io/badge/-Atlas-000000?style=for-the-badge&labelColor=faf9f6&color=faf9f6&logoColor=000000" alt="Atlas" width="280"/>
+
+<h4>AI-Powered Browser Automation Platform</h4>
+
+**English** | [简体中文](README-CN.md)
+
+<a href="https://pypi.org/project/autoagentsai">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
+    <img alt="PyPI version" src="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
+  </picture>
+</a>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="media/dark_license.svg" />
+  <img alt="License MIT" src="media/light_license.svg" />
+</picture>
+
+</div>
+
+Brief project description and main value proposition
+
+## Table of Contents
+- [Why Atlas?](#why-atlas)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Deployment](#deployment)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Why Atlas?
+## Quick Start
+## Architecture
+## Deployment
+## Contributing
+## License
+```
+
+## 🗂️ Catalog (Table of Contents)
+
+### Essential Sections
+- **Why Atlas**: Highlight key capabilities, benefits, and value proposition
+- **Quick Start**: Get users running in < 5 minutes
+- **Deployment**: Production deployment guides
+- **Contributing**: Guidelines for contributors
+- **License**: Project licensing information
+
+### Atlas-Specific Sections
+```markdown
+## Table of Contents
+- [Why Atlas?](#why-atlas)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Deployment](#deployment)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+```
+
+### Setup Script Emphasis
+**CRITICAL**: Always prominently feature the `setup.sh` script in Atlas documentation:
+- Position it as the **primary installation method**
+- Explain its 4-step configuration process
+- Provide manual alternatives as secondary options
+- Reference it in deployment sections as well
+
+### Setup Script Documentation Template
+```markdown
+## Interactive Setup with setup.sh
+
+Atlas includes a powerful interactive setup script that automates the entire configuration process:
+
+\`\`\`bash
+# Run the setup script
+chmod +x setup.sh
+./setup.sh
+\`\`\`
+
+The setup script guides you through **4 essential steps**:
+
+### Step 1: Project Configuration
+- Customize project name and branding
+- Configure project-specific settings
+- Set up directory structure
+
+### Step 2: Port Configuration  
+- **Frontend Port**: Default 3100 (customizable)
+- **Backend Port**: Default 8100 (customizable)
+- Automatic port conflict detection
+- Updates all configuration files
+
+### Step 3: Dependencies Installation
+- **Frontend**: Automatic `npm install`
+- **Backend**: Automatic `pip install -r requirements.txt`
+- Dependency verification and troubleshooting
+
+### Step 4: Summary & Next Steps
+- Configuration summary display
+- Environment file creation
+- Ready-to-run status confirmation
+
+### Benefits of Using setup.sh
+- ✅ **Zero Manual Configuration**: Fully automated setup
+- ✅ **Error Prevention**: Validates configurations before proceeding
+- ✅ **Time Saving**: Complete setup in under 2 minutes
+- ✅ **Beginner Friendly**: Interactive prompts guide users
+- ✅ **Consistent Environment**: Ensures proper configuration across systems
+```
+
+## Why Atlas Section
+
+### Why Atlas Documentation Pattern
+```markdown
+## Why Atlas?
+
+Atlas 是一个革命性的 AI 浏览器控制器，让你可以通过自然语言对话来操控浏览器。基于 E2B 云桌面技术，Atlas 提供了安全、隔离的浏览器自动化环境，支持复杂的 Web 操作任务。
+
+### 核心特性
+
+#### AI-Powered Browser Automation
+- **自然语言控制**：通过聊天对话控制浏览器操作，零编程门槛
+- **E2B 云桌面**：安全隔离的云环境进行浏览器自动化
+- **实时预览**：通过桌面流观看 AI 操作过程
+
+#### Modern Chat Interface
+- **直观界面**：类 ChatGPT 的对话体验
+- **多语言支持**：支持中英文界面切换
+- **实时状态**：显示会话状态和连接状态
+
+#### Desktop Management
+- **会话控制**：创建、暂停、恢复和销毁会话
+- **Take Over 模式**：在 AI 控制和手动控制之间切换
+- **文件管理**：下载和管理 AI 生成的文件
+
+#### Developer Features
+- **模块化 API**：清晰的 FastAPI 路由架构
+- **Docker 支持**：容器化部署就绪
+- **开源项目**：MIT 许可证，完整源码访问
+
+### 为什么选择 Atlas？
+
+- **零编程门槛**：无需编写代码，通过对话即可完成复杂操作
+- **安全可靠**：E2B 云桌面确保操作安全性和环境隔离
+- **快速部署**：一键 Docker 部署，支持生产环境
+- **灵活控制**：AI 自动化与手动控制无缝切换
+```
+
+### Why Atlas Writing Guidelines
+- **Value proposition first**: Start with what Atlas enables users to achieve
+- **Problem-solution approach**: Highlight pain points and how Atlas solves them
+- **Use action-oriented headlines**: Focus on what users can DO
+- **Include concrete benefits**: Why each feature matters in practice
+- **Be specific**: Avoid vague marketing language, provide tangible outcomes
+- **Group logically**: Related features and benefits together
+- **Clean design**: Professional appearance without emojis
+- **Show differentiation**: What makes Atlas unique compared to alternatives
+
+## Quick Start Section
+
+### Atlas Quick Start Template
+```markdown
+## Quick Start
+
+### Prerequisites
+- Node.js 18+ and npm
+- Python 3.11+
+- E2B API key ([Get one here](https://e2b.dev))
+- OpenAI API key
+
+### Automated Setup with setup.sh (Recommended)
+
+The easiest way to get Atlas running is using our interactive setup script:
+
+\`\`\`bash
+# 1. Clone the repository
+git clone https://github.com/your-org/atlas.git
+cd atlas
+
+# 2. Make setup script executable and run it
+chmod +x setup.sh
+./setup.sh
+\`\`\`
+
+The setup script will guide you through:
+- ✅ **Project Configuration**: Customize project name and settings
+- ✅ **Port Configuration**: Set frontend (default: 3100) and backend (default: 8100) ports
+- ✅ **Dependencies Installation**: Automatically install frontend and backend dependencies
+- ✅ **Environment Setup**: Create necessary configuration files
+
+### Start Development
+\`\`\`bash
+# After setup.sh completes, start the application
+make dev
+
+# Or manually start both services:
+# Backend: cd backend && uvicorn API.main:app --reload --port 8100 &
+# Frontend: cd frontend && npm run dev
+\`\`\`
+
+### Manual Environment Configuration (If needed)
+\`\`\`bash
+# Set your API keys (if not done via setup.sh)
+export E2B_API_KEY=your_e2b_key
+export OPENAI_API_KEY=your_openai_key
+
+# Optional: Custom API URL for frontend
+export NEXT_PUBLIC_API_URL=http://localhost:8100
+\`\`\`
+
+### Access Atlas
+- **Frontend Interface**: http://localhost:3100
+- **API Documentation**: http://localhost:8100/docs
+- **Health Check**: http://localhost:8100/api/health
+
+### First Browser Automation
+1. Click **"Create Session"** to start E2B desktop
+2. Wait for desktop preview to load in the right panel
+3. Type in chat: *"Please search for 'artificial intelligence' on Google"*
+4. Watch AI control the browser in real-time! 🎉
+
+### Alternative Quick Start (Without setup.sh)
+\`\`\`bash
+# Manual setup if you prefer not to use setup.sh
+git clone https://github.com/your-org/atlas.git
+cd atlas
+
+# Install dependencies
+cd frontend && npm install && cd ..
+cd backend && pip install -r requirements.txt && cd ..
+
+# Set environment variables
+export E2B_API_KEY=your_e2b_key
+export OPENAI_API_KEY=your_openai_key
+
+# Start services
+make dev
+\`\`\`
+
+**Note**: If you later want to use setup.sh, remember to make it executable first:
+\`\`\`bash
+chmod +x setup.sh
+./setup.sh
+\`\`\`
+```
+
+### Quick Start Best Practices
+- **setup.sh First**: Always recommend the interactive setup script as the primary method
+- **chmod Required**: Always include `chmod +x setup.sh` before running the script
+- **Time-boxed**: User should be running in < 5 minutes
+- **Copy-paste ready**: All commands should work exactly as written
+- **Prerequisites clear**: What users need before starting
+- **Alternative methods**: Provide manual setup for users who prefer it
+- **Verification steps**: How to know it's working
+- **Next steps**: Where to go after quick start
+
+## Deployment Section
+
+### Atlas Deployment Template
+```markdown
+## Deployment
+
+### Docker Deployment (Recommended)
+
+#### Production Deployment with Docker Compose
+\`\`\`bash
+# 1. 创建部署目录
+mkdir -p /path/to/deployment/frank
+cd frank
+
+# 2. 下载项目包
+wget -P /root/frank https://your-cdn.com/Atlas.zip
+unzip Atlas.zip -x "__MACOSX/*"
+
+# 3. 进入项目目录
+cd Atlas
+
+# 4. 启动服务
+docker compose -f docker/docker-compose.yml up -d
+
+# 5. 查看应用日志
+docker compose -f docker/docker-compose.yml logs -f app
+\`\`\`
+
+#### Environment Variables
+\`\`\`bash
+# Required - Set in docker-compose.yml or .env file
+E2B_API_KEY=your_e2b_api_key
+OPENAI_API_KEY=your_openai_key
+
+# Optional
+FRONTEND_PORT=3100
+BACKEND_PORT=8100
+NODE_ENV=production
+\`\`\`
+
+### Service Management
+
+#### 查看服务状态
+\`\`\`bash
+# 检查运行状态
+docker compose -f docker/docker-compose.yml ps
+
+# 查看实时日志
+docker compose -f docker/docker-compose.yml logs -f
+
+# 重启服务
+docker compose -f docker/docker-compose.yml restart
+\`\`\`
+
+#### 停止和清理
+\`\`\`bash
+# 停止所有服务
+docker compose -f docker/docker-compose.yml down
+
+# 完全清理（包括卷）
+docker compose -f docker/docker-compose.yml down -v
+
+# 清理未使用的镜像
+docker image prune -f
+\`\`\`
+
+### Production Configuration
+
+#### Security Checklist
+- [ ] Configure HTTPS/SSL certificates
+- [ ] Set secure CORS origins
+- [ ] Use environment variables for secrets
+- [ ] Enable rate limiting
+- [ ] Configure proper logging
+
+#### Performance Optimization
+- [ ] Enable gzip compression
+- [ ] Configure CDN for static assets
+- [ ] Monitor resource usage
+- [ ] Implement health checks
+
+### Monitoring & Maintenance
+- **Health Checks**: Access via `/api/health` endpoint
+- **Logs**: Use `docker compose logs -f` for real-time monitoring
+- **Metrics**: Monitor E2B usage and API calls
+- **Updates**: Regular dependency updates and security patches
+
+### Troubleshooting
+
+#### 清理旧容器和镜像
+\`\`\`bash
+# 停止并删除旧容器
+docker stop atlas && docker rm atlas
+
+# 删除旧镜像
+docker rmi atlas-app
+
+# 清理所有未使用的容器和镜像
+docker system prune -f
+\`\`\`
+
+#### 常见问题解决
+\`\`\`bash
+# 如果端口冲突
+docker compose -f docker/docker-compose.yml down
+# 修改 docker-compose.yml 中的端口映射
+
+# 如果容器启动失败
+docker compose -f docker/docker-compose.yml logs app
+
+# 重新构建镜像
+docker compose -f docker/docker-compose.yml build --no-cache
+
+# 如果权限问题（setup.sh）
+chmod +x setup.sh
+./setup.sh
+\`\`\`
+```
+
+### Deployment Documentation Guidelines
+- **Docker-focused**: Primarily Docker Compose deployment workflow
+- **Download-based**: Pre-built package distribution instead of git clone
+- **Service management**: Complete container lifecycle management
+- **Security focused**: Production security considerations
+- **Monitoring included**: Real-time logs and health checks
+- **Troubleshooting**: Common deployment issues and solutions
+
+## Content Writing Best Practices
+
+### 1. Structure
+- **Logical flow**: Introduction → Why Atlas → Quick Start → Architecture → Deployment
+- **Scannable**: Use headers, lists, and code blocks
+- **Progressive disclosure**: Basic first, advanced details later
+
+### 2. Code Examples
+- **Working examples**: All code should be copy-paste ready
+- **Syntax highlighting**: Use proper language tags
+- **Context**: Explain what each example does
+- **Multiple formats**: CLI commands, API calls, config files
+
+### 3. Visual Elements
+- **Clean headers**: Professional section headers without emojis
+- **Badges**: License badge only, using local SVG files from media/
+- **Screenshots**: Key UI elements and workflows
+- **Diagrams**: Architecture and flow diagrams
+
+### 4. User-Focused Writing
+- **Benefits first**: What users can achieve
+- **Clear language**: Avoid jargon when possible
+- **Action-oriented**: Tell users what to DO
+- **Troubleshooting**: Common issues and solutions
+
+## Header Design Guidelines
+
+### Atlas Logo Badge
+Use the specific Atlas logo badge with clean color scheme:
+```markdown
+<img src="https://img.shields.io/badge/-Atlas-000000?style=for-the-badge&labelColor=faf9f6&color=faf9f6&logoColor=000000" alt="Atlas" width="280"/>
+```
+
+**Color Specifications:**
+- **Background Color**: `#faf9f6` (light cream)
+- **Text Color**: `#000000` (black)
+- **Style**: `for-the-badge` for professional appearance
+- **Width**: `280px` for optimal display
+
+### PyPI Version Badge
+Use dynamic PyPI version badge with theme support:
+```markdown
+<a href="https://pypi.org/project/autoagentsai">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
+    <img alt="PyPI version" src="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
+  </picture>
+</a>
+```
+
+### License Badge
+Use local SVG files for better performance and consistency:
+```markdown
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="media/dark_license.svg" />
+  <img alt="License MIT" src="media/light_license.svg" />
+</picture>
+```
+
+**Badge Guidelines:**
+- **Local files only**: Reference `media/` directory SVG files for license badges
+- **Dynamic PyPI badges**: Use theme-aware PyPI version badges with picture elements
+- **Responsive design**: Support both light and dark themes
+- **Essential badges**: License badge (local) and PyPI version (dynamic) are recommended
+
+### Language Switching
+```markdown
+**English** | [简体中文](README-CN.md)  // For English README
+[English](README.md) | **简体中文**              // For Chinese README
+```
+
+## Cross-References
+
+When writing README content, reference other project files:
+- **Setup Script**: [setup.sh](mdc:setup.sh) - **PRIMARY** interactive project configuration script
+- **Start Script**: [docker/start.sh](mdc:docker/start.sh) - Application startup automation
+- **Build System**: [Makefile](mdc:Makefile) - Development and deployment commands
+- **Docker**: [docker/docker-compose.yml](mdc:docker/docker-compose.yml) - Container orchestration
+- **Backend API**: [backend/API/main.py](mdc:backend/API/main.py) - Main API entry point
+- **Frontend**: [frontend/app/layout.tsx](mdc:frontend/app/layout.tsx) - UI layout
+- **Dependencies**: [backend/requirements.txt](mdc:backend/requirements.txt) and [frontend/package.json](mdc:frontend/package.json)
+- **License Assets**: [media/light_license.svg](mdc:media/light_license.svg) and [media/dark_license.svg](mdc:media/dark_license.svg) - Theme-aware license badges
+
+### README File Organization
+Atlas project maintains bilingual documentation:
+1. **README.md**: English version (primary document)
+2. **README-CN.md**: Chinese version (完整中文文档)
+3. **Language switching**: Clear navigation between versions
+4. **Consistent format**: Both versions use identical structure and styling
+
+### Key Documentation Requirements
+1. **No emojis**: Professional, clean appearance
+2. **Centered layout**: Use `<div align="center">` for header section
+3. **Local assets**: Reference `media/` directory for license badges and images
+4. **Essential badges**: License badge (local) and PyPI version badge (dynamic) recommended
+5. **Responsive design**: Support light/dark themes
+6. **Bilingual support**: English and Chinese versions with proper cross-links
+
+### Setup Script Usage Priority
+Always prioritize [setup.sh](mdc:setup.sh) in documentation:
+1. **Development setup**: `./setup.sh` for local development
+2. **Production deployment**: Download-based Docker deployment 
+3. **Manual alternative**: Step-by-step instructions for advanced users

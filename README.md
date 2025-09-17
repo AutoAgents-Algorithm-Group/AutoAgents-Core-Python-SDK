@@ -1,29 +1,90 @@
-# AutoAgents AI Python SDK
+<div align="center">
 
-[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://python.org)
-[![Version](https://img.shields.io/badge/version-0.1.22-green.svg)](https://pypi.org/project/autoagentsai/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<img src="https://img.shields.io/badge/-AutoAgents%20AI%20Python%20SDK-000000?style=for-the-badge&labelColor=faf9f6&color=faf9f6&logoColor=000000" alt="AutoAgents AI Python SDK" width="380"/>
 
-专业的 AutoAgents AI 平台 Python SDK，提供简洁易用的 API 接口，支持智能对话、文件处理、知识库管理等功能。
+<h4>Professional AI Platform Python SDK</h4>
 
-## ✨ 主要特性
+**English** | [简体中文](README-CN.md)
 
-- **🤖 智能对话**：流式对话，支持多轮交互和推理过程展示
-- **📁 文件处理**：自动处理多种文件格式（PDF、Word、图片等）
-- **🗂️ 知识库管理**：完整的知识库 CRUD 操作和内容搜索
-- **🎨 预构建智能体**：PPT 生成、React Agent 等开箱即用的功能
-- **🌐 多模态支持**：文本、图片、文件的统一处理接口
-- **⚡ 异步支持**：高性能的异步 API 调用
 
-## 🚀 快速开始
 
-### 安装
+<a href="https://pypi.org/project/autoagentsai">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
+    <img alt="PyPI version" src="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
+  </picture>
+</a>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="media/dark_license.svg" />
+  <img alt="License MIT" src="media/light_license.svg" />
+</picture>
+
+</div>
+
+Professional Python SDK for AutoAgents AI platform, providing intuitive APIs for intelligent conversation, file processing, knowledge base management, and more.
+
+## Table of Contents
+- [Why AutoAgents AI Python SDK?](#why-autoagents-ai-python-sdk)
+- [Quick Start](#quick-start)
+- [Core Features](#core-features)
+- [API Reference](#api-reference)
+- [Configuration](#configuration)
+- [Examples](#examples)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Why AutoAgents AI Python SDK?
+
+AutoAgents AI Python SDK is a comprehensive toolkit that transforms how developers interact with AI-powered automation systems. Built for modern Python applications, it provides seamless integration with the AutoAgents AI platform.
+
+### Core Features
+
+#### Intelligent Conversation
+- **Streaming Chat**: Real-time conversation with multi-turn interactions
+- **Reasoning Process**: Display AI thinking and decision-making steps
+- **Multi-modal Support**: Handle text, images, and files in unified interface
+
+#### File Processing
+- **Multi-format Support**: Automatic processing of PDF, Word, images, and more
+- **Smart Analysis**: Extract insights and content from documents
+- **Batch Operations**: Handle multiple files efficiently
+
+#### Knowledge Base Management
+- **Complete CRUD Operations**: Create, read, update, delete knowledge bases
+- **Advanced Search**: Semantic search and content retrieval
+- **Content Organization**: Structured storage and management
+
+#### Pre-built Agents
+- **PowerPoint Generation**: Create presentations from templates and data
+- **React Agents**: Interactive problem-solving agents
+- **Workflow Automation**: Complex multi-step task orchestration
+- **Data Science Tools**: Analytics and visualization capabilities
+
+#### Modern Architecture
+- **Async Support**: High-performance asynchronous API calls
+- **Type Safety**: Full Pydantic type validation
+- **Extensible Design**: Modular components for custom solutions
+
+### Why Choose AutoAgents AI Python SDK?
+
+- **Developer-First**: Intuitive APIs designed for modern Python development
+- **Production-Ready**: Battle-tested in enterprise environments
+- **Comprehensive**: Everything needed for AI automation in one package
+- **Well-Documented**: Extensive examples and clear API documentation
+
+## Quick Start
+
+### Prerequisites
+- Python 3.11+
+- AutoAgents AI platform account
+
+### Installation
 
 ```bash
 pip install autoagentsai
 ```
 
-或从源码安装：
+Or install from source:
 
 ```bash
 git clone https://github.com/your-repo/autoagents-python-sdk.git
@@ -31,157 +92,206 @@ cd autoagents-python-sdk
 pip install -e .
 ```
 
-### 基础用法
+### Get API Keys
 
-#### 智能对话
+1. Log in to AutoAgents AI platform
+2. Navigate to Profile → Personal Keys
+3. Copy your `personal_auth_key` and `personal_auth_secret`
+
+### First Conversation
 
 ```python
 from autoagentsai.client import ChatClient
 
-# 初始化客户端
+# Initialize client
 client = ChatClient(
     agent_id="your_agent_id",
     personal_auth_key="your_auth_key", 
     personal_auth_secret="your_auth_secret"
 )
 
-# 发起对话
-for event in client.invoke("你好，请介绍一下人工智能"):
+# Start conversation
+for event in client.invoke("Hello, please introduce artificial intelligence"):
     if event['type'] == 'token':
         print(event['content'], end='', flush=True)
     elif event['type'] == 'finish':
         break
 ```
 
-#### 文件分析
+### File Processing
 
 ```python
-# 上传并分析文件
+# Upload and analyze files
 for event in client.invoke(
-    prompt="请分析这个文档的主要内容",
+    prompt="Please analyze the main content of this document",
     files=["document.pdf"]
 ):
     if event['type'] == 'token':
         print(event['content'], end='', flush=True)
 ```
 
-#### 知识库管理
+### Knowledge Base Management
 
 ```python
 from autoagentsai.client import KbClient
 
-# 初始化知识库客户端
+# Initialize knowledge base client
 kb_client = KbClient(
     personal_auth_key="your_auth_key",
     personal_auth_secret="your_auth_secret"
 )
 
-# 创建知识库
+# Create knowledge base
 result = kb_client.create_kb(
-    name="技术文档库",
-    description="存储技术相关文档"
+    name="Technical Documentation",
+    description="Store technical documents"
 )
 
-# 查询知识库列表
+# Query knowledge base list
 kb_list = kb_client.query_kb_list()
 ```
 
-#### PPT 生成
+### Slide Generation
 
 ```python
-from autoagentsai.prebuilt import create_ppt_agent
+from autoagentsai.slide import SlideAgent
 
-# 创建 PPT 智能体
-ppt_agent = create_ppt_agent()
+# Create slide agent
+slide_agent = SlideAgent()
 
-# 填充 PPT 模板
-ppt_agent.fill(
-    prompt="关于人工智能发展的PPT",
+# Generate presentation
+slide_agent.fill(
+    prompt="Create a presentation about AI development",
     template_file_path="template.pptx",
     output_file_path="output.pptx"
 )
 ```
 
-## 📚 API 参考
+### Advanced Workflow Automation
+
+```python
+from autoagentsai.graph import FlowGraph
+
+# Create workflow graph
+graph = FlowGraph(
+    personal_auth_key="your_auth_key",
+    personal_auth_secret="your_auth_secret"
+)
+
+# Add workflow nodes and compile
+graph.add_node("chat_node", "chat", {"prompt": "Analyze this data"})
+graph.add_node("ppt_node", "slide", {"template": "report.pptx"})
+graph.add_edge("chat_node", "ppt_node")
+
+# Deploy workflow
+graph.compile(workflow_name="data_analysis_pipeline")
+```
+
+## API Reference
 
 ### ChatClient
 
-主要的对话客户端，支持流式对话和多模态输入。
+Main conversation client supporting streaming chat and multimodal input.
 
-#### 方法
+#### Methods
 
-- `invoke(prompt, images=None, files=None)` - 发起对话
-- `history()` - 获取对话历史
+- `invoke(prompt, images=None, files=None)` - Start conversation
+- `history()` - Get conversation history
 
-#### 事件类型
+#### Event Types
 
-- `start_bubble` - 新的回复气泡开始
-- `token` - 文本片段（用于打字机效果）
-- `reasoning_token` - AI 推理过程
-- `end_bubble` - 回复气泡结束
-- `finish` - 对话完成
+- `start_bubble` - New response bubble starts
+- `token` - Text fragment (for typewriter effect)
+- `reasoning_token` - AI reasoning process
+- `end_bubble` - Response bubble ends
+- `finish` - Conversation complete
 
 ### KbClient
 
-知识库管理客户端。
+Knowledge base management client.
 
-#### 方法
+#### Methods
 
-- `create_kb(name, description)` - 创建知识库
-- `query_kb_list()` - 查询知识库列表
-- `get_kb_detail(kb_id)` - 获取知识库详情
-- `delete_kb(kb_id)` - 删除知识库
+- `create_kb(name, description)` - Create knowledge base
+- `query_kb_list()` - Query knowledge base list
+- `get_kb_detail(kb_id)` - Get knowledge base details
+- `delete_kb(kb_id)` - Delete knowledge base
 
-## 🛠️ 环境要求
+### FlowGraph
 
-- Python 3.11+
-- 依赖包：
-  - `pydantic>=2.11.7`
-  - `requests>=2.32.4`
+Workflow automation and orchestration.
 
-## 🔧 配置
+#### Methods
 
-### 环境设置
+- `add_node(node_id, module_type, inputs)` - Add workflow node
+- `add_edge(source, target)` - Connect nodes
+- `compile(workflow_name)` - Deploy workflow
+
+## Configuration
+
+### Environment Settings
 
 ```python
-# 测试环境（默认）
+# Development environment (default)
 base_url = "https://uat.agentspro.cn"
 
-# 生产环境
+# Production environment
 base_url = "https://agentspro.cn"
 ```
 
-### 获取 API 密钥
+### API Keys Setup
 
-1. 登录 AutoAgents AI 平台
-2. 右上角 - 个人密钥
-3. 复制 `personal_auth_key` 和 `personal_auth_secret`
+Set your credentials as environment variables:
 
-### 获取 Agent ID
+```bash
+export AUTOAGENTS_AUTH_KEY="your_auth_key"
+export AUTOAGENTS_AUTH_SECRET="your_auth_secret"
+```
 
-1. 进入 Agent 详情页
-2. 点击"分享" - "API"
-3. 复制 Agent ID
+Or pass them directly when initializing clients:
 
-## 📖 更多示例
+```python
+client = ChatClient(
+    personal_auth_key="your_auth_key",
+    personal_auth_secret="your_auth_secret"
+)
+```
 
-查看 `playground/` 目录获取更多使用示例：
+### Getting Agent ID
 
-- `playground/chat/` - 对话功能示例
-- `playground/ppt/` - PPT 生成示例  
-- `playground/kb/` - 知识库管理示例
-- `playground/react_agent/` - React Agent 示例
+1. Open Agent details page
+2. Click "Share" → "API"
+3. Copy Agent ID
 
-## 📄 许可证
+## Examples
+
+Explore the `playground/` directory for comprehensive examples:
+
+- `playground/client/` - Chat and API examples
+- `playground/slide/` - PowerPoint generation examples
+- `playground/kb/` - Knowledge base management
+- `playground/react/` - React Agent examples
+- `playground/graph/` - Workflow automation
+- `playground/datascience/` - Data analysis tools
+
+## Contributing
+
+We welcome contributions! Please feel free to submit issues and pull requests.
+
+### Development Setup
+
+```bash
+git clone https://github.com/your-repo/autoagents-python-sdk.git
+cd autoagents-python-sdk
+pip install -e .[dev]
+```
+
+## License
 
 MIT License
 
-## 🤝 贡献
+## Support
 
-欢迎提交 Issue 和 Pull Request！
-
-## 📞 支持
-
-- 📧 邮箱：forhheart5532@gmail.com
-- 📚 文档：[AutoAgents AI 官方文档](https://docs.agentspro.cn)
-- 🐛 问题报告：[GitHub Issues](https://github.com/your-repo/autoagents-python-sdk/issues)
+- **Email**: forhheart5532@gmail.com
+- **Documentation**: [AutoAgents AI Official Docs](https://docs.agentspro.cn)
+- **Issues**: [GitHub Issues](https://github.com/your-repo/autoagents-python-sdk/issues)
