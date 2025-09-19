@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/-autoagents_core-000000?style=for-the-badge&labelColor=faf9f6&color=faf9f6&logoColor=000000" alt="autoagents_core Python SDK" width="380"/>
+<img src="https://img.shields.io/badge/-autoagents_core-000000?style=for-the-badge&labelColor=faf9f6&color=faf9f6&logoColor=000000" alt="AutoAgents Core Python SDK" width="380"/>
 
 <h4>Enterprise-level AI Agent Building Platform Python SDK</h4>
 
@@ -24,16 +24,16 @@ English | [简体中文](README-CN.md)
 Professional Python SDK for AutoAgents AI platform, providing intuitive APIs for intelligent conversation, file processing, knowledge base management, and more.
 
 ## Table of Contents
-- [Why AutoAgents Core Python SDK?](#why-autoagents-core-python-sdk)
+- [Why AutoAgents Core?](#why-autoagents-core)
 - [Quick Start](#quick-start)
 - [Core Features](#core-features)
 - [Examples](#examples)
 - [Contributing](#contributing)
 - [License](#license)
 
-## Why AutoAgents Core Python SDK?
+## Why AutoAgents Core?
 
-AutoAgents Core AI Python SDK is a comprehensive toolkit that transforms how developers interact with AI-powered automation systems. Built for modern Python applications, it provides seamless integration with the AutoAgents AI platform.
+AutoAgents Core Python SDK is a comprehensive toolkit that transforms how developers interact with AI-powered automation systems. Built for modern Python applications, it provides seamless integration with the AutoAgents AI platform.
 
 ### Core Features
 
