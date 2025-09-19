@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from src.autoagentsai.datascience import DSAgent
+from src.autoagents_core.datascience import DSAgent
 
 
 def main():

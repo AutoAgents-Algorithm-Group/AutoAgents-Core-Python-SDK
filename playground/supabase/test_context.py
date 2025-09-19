@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from src.autoagentsai.client import SupabaseClient
+from src.autoagents_core.client import SupabaseClient
 
 def main():
     supabase_client = SupabaseClient(

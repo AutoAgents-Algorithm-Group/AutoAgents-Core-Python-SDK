@@ -1,7 +1,7 @@
 """
 工具调用格式详解演示
 
-这个文件展示了AutoAgents系统中各种工具调用的格式和流程
+这个文件展示了autoagents_core系统中各种工具调用的格式和流程
 """
 
 import os
@@ -10,10 +10,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 
 import json
 from datetime import datetime
-from src.autoagentsai.tools import ToolManager, ToolWrapper, tool
+from src.autoagents_core.tools import ToolManager, ToolWrapper, tool
 
 print("=" * 80)
-print("🛠️  AutoAgents 工具调用格式详解")
+print("🛠️  autoagents_core 工具调用格式详解")
 print("=" * 80)
 
 # ============= 1. 工具定义的格式 =============

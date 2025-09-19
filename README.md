@@ -1,17 +1,17 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/-AutoAgents%20AI%20Python%20SDK-000000?style=for-the-badge&labelColor=faf9f6&color=faf9f6&logoColor=000000" alt="AutoAgents AI Python SDK" width="380"/>
+<img src="https://img.shields.io/badge/-autoagents_core-000000?style=for-the-badge&labelColor=faf9f6&color=faf9f6&logoColor=000000" alt="autoagents_core Python SDK" width="380"/>
 
-<h4>Professional AI Platform Python SDK</h4>
+<h4>Enterprise-level AI Agent Building Platform Python SDK</h4>
 
-**English** | [简体中文](README-CN.md)
+English | [简体中文](README-CN.md)
 
 
 
-<a href="https://pypi.org/project/autoagentsai">
+<a href="https://pypi.org/project/autoagents-core">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
-    <img alt="PyPI version" src="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/pypi/v/autoagents-core.svg?style=for-the-badge" />
+    <img alt="PyPI version" src="https://img.shields.io/pypi/v/autoagents-core.svg?style=for-the-badge" />
   </picture>
 </a>
 <picture>
@@ -24,18 +24,16 @@
 Professional Python SDK for AutoAgents AI platform, providing intuitive APIs for intelligent conversation, file processing, knowledge base management, and more.
 
 ## Table of Contents
-- [Why AutoAgents AI Python SDK?](#why-autoagents-ai-python-sdk)
+- [Why AutoAgents Core Python SDK?](#why-autoagents-core-python-sdk)
 - [Quick Start](#quick-start)
 - [Core Features](#core-features)
-- [API Reference](#api-reference)
-- [Configuration](#configuration)
 - [Examples](#examples)
 - [Contributing](#contributing)
 - [License](#license)
 
-## Why AutoAgents AI Python SDK?
+## Why AutoAgents Core Python SDK?
 
-AutoAgents AI Python SDK is a comprehensive toolkit that transforms how developers interact with AI-powered automation systems. Built for modern Python applications, it provides seamless integration with the AutoAgents AI platform.
+AutoAgents Core AI Python SDK is a comprehensive toolkit that transforms how developers interact with AI-powered automation systems. Built for modern Python applications, it provides seamless integration with the AutoAgents AI platform.
 
 ### Core Features
 
@@ -65,7 +63,7 @@ AutoAgents AI Python SDK is a comprehensive toolkit that transforms how develope
 - **Type Safety**: Full Pydantic type validation
 - **Extensible Design**: Modular components for custom solutions
 
-### Why Choose AutoAgents AI Python SDK?
+### Why Choose AutoAgents Core AI Python SDK?
 
 - **Developer-First**: Intuitive APIs designed for modern Python development
 - **Production-Ready**: Battle-tested in enterprise environments
@@ -81,15 +79,7 @@ AutoAgents AI Python SDK is a comprehensive toolkit that transforms how develope
 ### Installation
 
 ```bash
-pip install autoagentsai
-```
-
-Or install from source:
-
-```bash
-git clone https://github.com/your-repo/autoagents-python-sdk.git
-cd autoagents-python-sdk
-pip install -e .
+pip install autoagents-core
 ```
 
 ### Get API Keys
@@ -101,7 +91,7 @@ pip install -e .
 ### First Conversation
 
 ```python
-from autoagentsai.client import ChatClient
+from autoagents_core.client import ChatClient
 
 # Initialize client
 client = ChatClient(
@@ -133,7 +123,7 @@ for event in client.invoke(
 ### Knowledge Base Management
 
 ```python
-from autoagentsai.client import KbClient
+from autoagents_core.client import KbClient
 
 # Initialize knowledge base client
 kb_client = KbClient(
@@ -154,7 +144,7 @@ kb_list = kb_client.query_kb_list()
 ### Slide Generation
 
 ```python
-from autoagentsai.slide import SlideAgent
+from autoagents_core.slide import SlideAgent
 
 # Create slide agent
 slide_agent = SlideAgent()
@@ -170,7 +160,7 @@ slide_agent.fill(
 ### Advanced Workflow Automation
 
 ```python
-from autoagentsai.graph import FlowGraph
+from autoagents_core.graph import FlowGraph
 
 # Create workflow graph
 graph = FlowGraph(
@@ -187,75 +177,6 @@ graph.add_edge("chat_node", "ppt_node")
 graph.compile(workflow_name="data_analysis_pipeline")
 ```
 
-## API Reference
-
-### ChatClient
-
-Main conversation client supporting streaming chat and multimodal input.
-
-#### Methods
-
-- `invoke(prompt, images=None, files=None)` - Start conversation
-- `history()` - Get conversation history
-
-#### Event Types
-
-- `start_bubble` - New response bubble starts
-- `token` - Text fragment (for typewriter effect)
-- `reasoning_token` - AI reasoning process
-- `end_bubble` - Response bubble ends
-- `finish` - Conversation complete
-
-### KbClient
-
-Knowledge base management client.
-
-#### Methods
-
-- `create_kb(name, description)` - Create knowledge base
-- `query_kb_list()` - Query knowledge base list
-- `get_kb_detail(kb_id)` - Get knowledge base details
-- `delete_kb(kb_id)` - Delete knowledge base
-
-### FlowGraph
-
-Workflow automation and orchestration.
-
-#### Methods
-
-- `add_node(node_id, module_type, inputs)` - Add workflow node
-- `add_edge(source, target)` - Connect nodes
-- `compile(workflow_name)` - Deploy workflow
-
-## Configuration
-
-### Environment Settings
-
-```python
-# Development environment (default)
-base_url = "https://uat.agentspro.cn"
-
-# Production environment
-base_url = "https://agentspro.cn"
-```
-
-### API Keys Setup
-
-Set your credentials as environment variables:
-
-```bash
-export AUTOAGENTS_AUTH_KEY="your_auth_key"
-export AUTOAGENTS_AUTH_SECRET="your_auth_secret"
-```
-
-Or pass them directly when initializing clients:
-
-```python
-client = ChatClient(
-    personal_auth_key="your_auth_key",
-    personal_auth_secret="your_auth_secret"
-)
-```
 
 ### Getting Agent ID
 
@@ -271,7 +192,6 @@ Explore the `playground/` directory for comprehensive examples:
 - `playground/slide/` - PowerPoint generation examples
 - `playground/kb/` - Knowledge base management
 - `playground/react/` - React Agent examples
-- `playground/graph/` - Workflow automation
 - `playground/datascience/` - Data analysis tools
 
 ## Contributing
@@ -281,8 +201,8 @@ We welcome contributions! Please feel free to submit issues and pull requests.
 ### Development Setup
 
 ```bash
-git clone https://github.com/your-repo/autoagents-python-sdk.git
-cd autoagents-python-sdk
+git clone https://github.com/your-repo/autoagents-core-python-sdk.git
+cd autoagents_core-python-sdk
 pip install -e .[dev]
 ```
 
@@ -290,8 +210,3 @@ pip install -e .[dev]
 
 MIT License
 
-## Support
-
-- **Email**: forhheart5532@gmail.com
-- **Documentation**: [AutoAgents AI Official Docs](https://docs.agentspro.cn)
-- **Issues**: [GitHub Issues](https://github.com/your-repo/autoagents-python-sdk/issues)

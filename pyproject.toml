@@ -1,7 +1,7 @@
 [project]
-name = "autoagentsai"
-version = "0.1.36"
-description = "SDK for interacting with Autoagents.ai API"
+name = "autoagents-core"
+version = "0.1.2"
+description = "SDK for interacting with AutoAgents.ai API"
 readme = "README.md"
 authors = [
     { name = "Hehua Fan", email = "forhheart5532@gmail.com" }
@@ -25,7 +25,10 @@ dependencies = [
 ]
 
 [project.scripts]
-autoagents-python-sdk = "autoagents_python_sdk:main"
+autoagents-core-python-sdk = "autoagents-core:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/autoagents_core"]
 
 [build-system]
 requires = ["hatchling"]

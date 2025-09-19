@@ -4,7 +4,7 @@ import sys
 # 自动添加项目根目录到 sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from src.autoagentsai.client import ChatClient
+from src.autoagents_core.client import ChatClient
 
 client = ChatClient(
     agent_id="90b60436c09b43e5b6d05a31abf8c662",

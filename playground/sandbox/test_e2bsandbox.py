@@ -2,9 +2,9 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from src.autoagentsai.sandbox import E2BSandboxService
-from src.autoagentsai.client import ChatClient
-from src.autoagentsai.utils.extractor import extract_python_code
+from src.autoagents_core.sandbox import E2BSandboxService
+from src.autoagents_core.client import ChatClient
+from src.autoagents_core.utils.extractor import extract_python_code
 
 def main():
     chat_client = ChatClient(

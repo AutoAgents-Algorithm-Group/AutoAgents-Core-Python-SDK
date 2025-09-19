@@ -3,7 +3,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 
-from src.autoagentsai.utils.convertor import excel_to_csv_and_images
+from src.autoagents_core.utils.convertor import excel_to_csv_and_images
 
 def main():
     excel_to_csv_and_images(

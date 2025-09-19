@@ -3,7 +3,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 
-from src.autoagentsai.client import KbClient
+from src.autoagents_core.client import KbClient
 
 def example_basic_delete():
     """基础删除示例"""

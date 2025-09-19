@@ -2,8 +2,8 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from src.autoagentsai.client.CrawlClient import CrawlClient, SiteConfig
-from src.autoagentsai.client.ChatClient import ChatClient
+from src.autoagents_core.client.CrawlClient import CrawlClient, SiteConfig
+from src.autoagents_core.client.ChatClient import ChatClient
 from pydantic import BaseModel
 from typing import List, Optional
 

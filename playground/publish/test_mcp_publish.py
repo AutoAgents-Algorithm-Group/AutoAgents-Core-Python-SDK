@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 
 
-from autoagentsai import ChatClient, Publisher
+from autoagents_core import ChatClient, Publisher
     
 def main():
     """原有的测试方法保持不变"""

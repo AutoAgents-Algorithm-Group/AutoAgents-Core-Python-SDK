@@ -9,7 +9,7 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../'))
 
-from src.autoagentsai.slide import HTML2PPTXAgent
+from src.autoagents_core.slide import HTML2PPTXAgent
 
 def create_test_html_content():
     """创建测试用的HTML内容"""

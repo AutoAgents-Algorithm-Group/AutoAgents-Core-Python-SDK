@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from src.autoagentsai.utils.uploader import ImageUploader, create_file_like
+from src.autoagents_core.utils.uploader import ImageUploader, create_file_like
 from io import BytesIO
 import json
 
@@ -16,11 +16,11 @@ def test_image_uploader():
     """测试ImageUploader的各种功能"""
     
     # 从环境变量获取JWT token，如果没有则使用测试token
-    jwt_token = os.getenv('AUTOAGENTS_JWT_TOKEN', 'your_test_token_here')
+    jwt_token = os.getenv('autoagents_core_JWT_TOKEN', 'your_test_token_here')
     
     if jwt_token == 'your_test_token_here':
-        print("警告: 请设置环境变量 AUTOAGENTS_JWT_TOKEN 或在代码中填入实际的JWT token")
-        print("export AUTOAGENTS_JWT_TOKEN='your_actual_token'")
+        print("警告: 请设置环境变量 autoagents_core_JWT_TOKEN 或在代码中填入实际的JWT token")
+        print("export autoagents_core_JWT_TOKEN='your_actual_token'")
         # return  # 如果想要强制需要token，可以取消注释这行
     
     # 创建ImageUploader实例
@@ -113,7 +113,7 @@ def test_image_uploader():
 def test_ensure_image_inputs():
     """测试 ensure_image_inputs 批量处理功能"""
     
-    jwt_token = os.getenv('AUTOAGENTS_JWT_TOKEN', 'your_test_token_here')
+    jwt_token = os.getenv('autoagents_core_JWT_TOKEN', 'your_test_token_here')
     uploader = ImageUploader(jwt_token=jwt_token)
     
     print("=== 测试 ensure_image_inputs 批量处理 ===\n")
@@ -151,7 +151,7 @@ def test_with_real_image():
         print("如果要测试真实图片，请将图片文件放到 playground/test_workspace/test_image.jpg")
         return
     
-    jwt_token = os.getenv('AUTOAGENTS_JWT_TOKEN', 'your_test_token_here')
+    jwt_token = os.getenv('autoagents_core_JWT_TOKEN', 'your_test_token_here')
     uploader = ImageUploader(jwt_token=jwt_token)
     
     print("=== 测试真实图片上传 ===\n")
@@ -171,7 +171,7 @@ def test_with_real_image():
 def main():
     """主测试函数"""
     print("开始测试 ImageUploader...")
-    print("请确保设置了正确的JWT token环境变量: AUTOAGENTS_JWT_TOKEN\n")
+    print("请确保设置了正确的JWT token环境变量: autoagents_core_JWT_TOKEN\n")
     
     # 基本功能测试
     test_image_uploader()

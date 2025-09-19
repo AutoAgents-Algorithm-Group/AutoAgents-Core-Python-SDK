@@ -5,9 +5,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 import asyncio
 import math
 from datetime import datetime
-from src.autoagentsai.client import MCPClient, ChatClient
-from src.autoagentsai.react import ReActAgent
-from src.autoagentsai.tools import tool, ToolWrapper
+from src.autoagents_core.client import MCPClient, ChatClient
+from src.autoagents_core.react import ReActAgent
+from src.autoagents_core.tools import tool, ToolWrapper
 
 # MCP服务器配置
 mcp_servers_config = {

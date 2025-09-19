@@ -18,10 +18,10 @@ This rule provides guidance for creating and maintaining comprehensive README do
 
 **English** | [简体中文](README-CN.md)
 
-<a href="https://pypi.org/project/autoagentsai">
+<a href="https://pypi.org/project/autoagents_coreai">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
-    <img alt="PyPI version" src="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/pypi/v/autoagents_coreai.svg?style=for-the-badge" />
+    <img alt="PyPI version" src="https://img.shields.io/pypi/v/autoagents_coreai.svg?style=for-the-badge" />
   </picture>
 </a>
 
@@ -436,10 +436,10 @@ Use the specific Atlas logo badge with clean color scheme:
 ### PyPI Version Badge
 Use dynamic PyPI version badge with theme support:
 ```markdown
-<a href="https://pypi.org/project/autoagentsai">
+<a href="https://pypi.org/project/autoagents_coreai">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
-    <img alt="PyPI version" src="https://img.shields.io/pypi/v/autoagentsai.svg?style=for-the-badge" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/pypi/v/autoagents_coreai.svg?style=for-the-badge" />
+    <img alt="PyPI version" src="https://img.shields.io/pypi/v/autoagents_coreai.svg?style=for-the-badge" />
   </picture>
 </a>
 ```

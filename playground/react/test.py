@@ -1,7 +1,7 @@
 import asyncio
-from src.autoagentsai.client import MCPClient, ChatClient
-from src.autoagentsai.react import ReActAgent
-from src.autoagentsai.tools import tool
+from src.autoagents_core.client import MCPClient, ChatClient
+from src.autoagents_core.react import ReActAgent
+from src.autoagents_core.tools import tool
 
 
 async def main():
